@@ -1,0 +1,26 @@
+# Alembic (database migrations)
+
+This folder contains Alembic configuration and migration scripts for the single-database backend.
+
+Files and entry points
+- Configuration: [backend/alembic.ini](backend/alembic.ini)
+- Runtime env: [backend/alembic/env.py](backend/alembic/env.py) — see `run_migrations_online` for runtime behavior and how the DB URL is sourced.
+- Application code / models: [backend/src](backend/src)
+- Project metadata: [backend/pyproject.toml](backend/pyproject.toml)
+- Repo-level notes: [README.md](README.md)
+
+Prerequisites
+- Python dependencies listed in [backend/requirements.txt](backend/requirements.txt) (install in your venv)
+- The app's SQLAlchemy models must be importable by `env.py` so autogenerate works
+
+Configuration
+- Alembic reads DB connection from [backend/alembic.ini](backend/alembic.ini) or from environment variables used by [backend/alembic/env.py](backend/alembic/env.py). By default the project uses a single database.
+- Ensure the same SQLAlchemy metadata used by the app is imported into `env.py` for correct autogeneration.
+
+Common workflows
+
+Create a new revision (autogenerate)
+```sh
+# run from backend/ (or ensure PYTHONPATH includes backend/src)
+alembic -c [alembic.ini](http://_vscodecontentref_/0) revision --autogenerate -m "describe change"
+```

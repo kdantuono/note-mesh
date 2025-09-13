@@ -7,7 +7,7 @@ name = "notemesh-backend"
 version = "1.0.0"
 description = "NoteMesh Backend - Collaborative note sharing platform"
 authors = [
-    {name = "Cosmo D'Antuono", email = "cosmo@example.com"},
+    {name = "Cosmo D'Antuono", email = "cosmo.dantuono@gmail.com"},
 ]
 readme = "README.md"
 requires-python = ">=3.11"
