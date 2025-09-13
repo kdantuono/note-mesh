@@ -1,7 +1,6 @@
 """
-Configuration management for NoteMesh backend.
-
-Environment-based configuration using Pydantic Settings.
+App configuration - using pydantic settings for env vars
+TODO: might need to split this if it gets too big
 """
 
 from typing import Optional
@@ -10,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings with environment variable support."""
+    """App settings - loads from .env file"""
     
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -19,22 +18,21 @@ class Settings(BaseSettings):
         extra="ignore"
     )
     
-    # Application
-    app_name: str = Field(default="NoteMesh API", description="Application name")
-    app_version: str = Field(default="1.0.0", description="Application version")
-    debug: bool = Field(default=False, description="Debug mode")
+    # basic app stuff
+    app_name: str = Field(default="NoteMesh API")
+    app_version: str = Field(default="1.0.0")
+    debug: bool = Field(default=False)  # set to True for dev
     
-    # Server
-    host: str = Field(default="0.0.0.0", description="Server host")
-    port: int = Field(default=8000, description="Server port")
-    reload: bool = Field(default=False, description="Auto-reload on code changes")
+    # server config
+    host: str = Field(default="0.0.0.0")
+    port: int = Field(default=8000)
+    reload: bool = Field(default=False)
     
-    # Database
+    # DB settings
     database_url: str = Field(
-        default="postgresql+asyncpg://notemesh:password@localhost:5432/notemesh",
-        description="Database connection URL"
+        default="postgresql+asyncpg://notemesh:password@localhost:5432/notemesh"
     )
-    database_echo: bool = Field(default=False, description="Echo SQL queries")
+    database_echo: bool = Field(default=False)  # useful for debugging
     
     # Redis
     redis_url: str = Field(
