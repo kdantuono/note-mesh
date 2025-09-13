@@ -4,10 +4,12 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: notemesh-postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: notemesh
-      POSTGRES_PASSWORD: notemesh_password
-      POSTGRES_DB: notemesh
+      POSTGRES_USER: ${POSTGRES_USER:-notemesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-notemesh}
     ports:
       - "5432:5432"
     volumes:
@@ -16,7 +18,7 @@ services:
     networks:
       - notemesh-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U notemesh -d notemesh"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,11 +44,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: notemesh-backend
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://notemesh:notemesh_password@postgres:5432/notemesh
-      REDIS_URL: redis://redis:6379/0
-      JWT_SECRET_KEY: your-production-secret-key-change-this
-      DEBUG: "false"
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      DEBUG: ${DEBUG:-"false"}
     ports:
       - "8000:8000"
     depends_on:
