@@ -1,8 +1,5 @@
 """
-Authentication and authorization schemas.
-
-These schemas define the API contracts for user authentication,
-registration, and JWT token management.
+Auth schemas for login/register stuff
 """
 
 from typing import Optional, List
@@ -12,37 +9,29 @@ import uuid
 
 
 class LoginRequest(BaseModel):
-    """User login request schema."""
-    
-    username: str = Field(min_length=3, max_length=50, description="Username")
-    password: str = Field(min_length=8, max_length=128, description="User password")
-    remember_me: bool = Field(default=False, description="Whether to extend session duration")
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+    remember_me: bool = Field(default=False)
     
     class Config:
         json_schema_extra = {
             "example": {
-                "username": "john_doe",
-                "password": "securepassword123",
+                "username": "mario85",
+                "password": "mypass123",
                 "remember_me": False
             }
         }
 
 
 class RegisterRequest(BaseModel):
-    """User registration request schema."""
-    
-    username: str = Field(min_length=3, max_length=50, description="Unique username")
-    password: str = Field(min_length=8, max_length=128, description="User password")
-    confirm_password: str = Field(min_length=8, max_length=128, description="Password confirmation")
-    full_name: Optional[str] = Field(
-        default=None,
-        max_length=100,
-        description="Full name (optional)"
-    )
+    # basic registration fields
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+    confirm_password: str = Field(min_length=8, max_length=128)
+    full_name: Optional[str] = Field(default=None, max_length=100)
     
     @validator('confirm_password')
     def passwords_match(cls, v, values, **kwargs):
-        """Validate that passwords match."""
         if 'password' in values and v != values['password']:
             raise ValueError('Passwords do not match')
         return v
@@ -58,10 +47,10 @@ class RegisterRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "username": "new_user",
-                "password": "securepassword123",
-                "confirm_password": "securepassword123",
-                "full_name": "New User"
+                "username": "paperino",
+                "password": "paperino123!",
+                "confirm_password": "paperino123!",
+                "full_name": "Rino detto Paperino"
             }
         }
 
@@ -111,14 +100,14 @@ class UserResponse(BaseModel):
         from_attributes = True
         json_schema_extra = {
             "example": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "username": "pippo",
-                "full_name": "Pippo The Ippo",
+                "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+                "username": "mario_writer",
+                "full_name": "Mario Bianchi",
                 "is_active": True,
-                "created_at": "2025-09-13T10:30:00Z",
-                "updated_at": "2025-09-13T11:00:00Z",
-                "notes_count": 25,
-                "shared_notes_count": 5
+                "created_at": "2025-08-15T14:22:33Z",
+                "updated_at": "2025-09-12T09:14:07Z",
+                "notes_count": 17,
+                "shared_notes_count": 3
             }
         }
 

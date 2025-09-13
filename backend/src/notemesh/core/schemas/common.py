@@ -1,7 +1,5 @@
 """
-Common Pydantic schemas used across the API.
-
-These schemas define common response structures and reusable components.
+Shared response schemas - pagination, errors etc
 """
 
 from typing import Generic, TypeVar, Optional, Any, List
@@ -12,15 +10,15 @@ T = TypeVar('T')
 
 
 class PaginationResponse(BaseModel, Generic[T]):
-    """Generic pagination response schema."""
+    """Pagination wrapper for API responses"""
     
-    items: List[T] = Field(description="List of items")
-    total: int = Field(description="Total number of items")
-    page: int = Field(description="Current page number (1-based)")
-    per_page: int = Field(description="Items per page")
-    pages: int = Field(description="Total number of pages")
-    has_next: bool = Field(description="Whether there is a next page")
-    has_prev: bool = Field(description="Whether there is a previous page")
+    items: List[T]
+    total: int
+    page: int
+    per_page: int
+    pages: int
+    has_next: bool
+    has_prev: bool
     
     @classmethod
     def create(
@@ -30,7 +28,7 @@ class PaginationResponse(BaseModel, Generic[T]):
         page: int,
         per_page: int
     ) -> "PaginationResponse[T]":
-        """Create pagination response with calculated fields."""
+        # calculate page info
         pages = (total + per_page - 1) // per_page
         
         return cls(
@@ -56,12 +54,12 @@ class ErrorResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "error": "ValidationError",
-                "message": "Invalid input data",
+                "message": "Username too short",
                 "details": {
-                    "field": "email",
-                    "issue": "Invalid email format"
+                    "field": "username",
+                    "issue": "Minimum 3 characters required"
                 },
-                "timestamp": "2025-09-13T10:30:00Z"
+                "timestamp": "2025-09-13T17:23:45Z"
             }
         }
 

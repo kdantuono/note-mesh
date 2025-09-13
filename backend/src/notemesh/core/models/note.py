@@ -22,6 +22,7 @@ class Note(BaseModel):
 
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    is_public: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     hyperlinks: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String(500)), nullable=True) # links in content
 
@@ -50,6 +51,14 @@ class Note(BaseModel):
         back_populates="note",
         cascade="all, delete-orphan",
         doc="Share records granting access to other users"
+    )
+
+    # Many-to-many relationship with tags through note_tags
+    tags: Mapped[List["Tag"]] = relationship(
+        "Tag",
+        secondary="note_tags",
+        back_populates="notes",
+        doc="Tags associated with this note"
     )
 
     # Database indexes for performance

@@ -1,10 +1,10 @@
-# Multi-stage build for NoteMesh backend
-FROM python:3.11-slim as builder
+# Development-friendly Dockerfile for NoteMesh backend
+FROM python:3.11-slim
 
 # Set build arguments
-ARG APP_ENV=production
+ARG APP_ENV=development
 
-# Install system dependencies for building Python packages
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
@@ -15,51 +15,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-COPY pyproject.toml setup.cfg setup.py ./
+# Copy requirements files
 COPY requirements.txt requirements-dev.txt ./
 
-# build a wheel for the app and install deps
+# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip wheel --no-deps --wheel-dir /wheels -r requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt && \
     if [ "$APP_ENV" = "development" ]; then \
-        pip wheel --no-deps --wheel-dir /wheels -r requirements-dev.txt; \
-    fi && \
-    pip wheel --no-deps --wheel-dir /wheels .
+        pip install --no-cache-dir -r requirements-dev.txt; \
+    fi
 
-FROM python:3.11-slim as production
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r notemesh && useradd -r -g notemesh notemesh
-
-WORKDIR /app
-
-# Install only wheels (no dev tooling)
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*
-
-# Copy only runtime files (application source)
+# Copy application source code
 COPY src ./src
-COPY backend/* LICENSE README.md ./
-
-# ensure correct ownership
-RUN chown -R notemesh:notemesh /app
-
-USER notemesh
-
-# Expose port
-EXPOSE 8000
+COPY alembic ./alembic
+COPY alembic.ini ./alembic.ini
 
 # Set environment variables
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Expose port
 EXPOSE 8000
 
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
-CMD ["uvicorn", "notemesh.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application
+CMD ["uvicorn", "notemesh.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

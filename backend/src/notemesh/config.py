@@ -42,15 +42,15 @@ class Settings(BaseSettings):
     redis_max_connections: int = Field(default=10, description="Redis connection pool size")
     
     # JWT
-    jwt_secret_key: str = Field(
+    secret_key: str = Field(
         default="your-secret-key-change-in-production",
         description="JWT secret key"
     )
-    jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
-    jwt_access_token_expire_minutes: int = Field(
+    algorithm: str = Field(default="HS256", description="JWT algorithm")
+    access_token_expire_minutes: int = Field(
         default=15, description="Access token expiration in minutes"
     )
-    jwt_refresh_token_expire_days: int = Field(
+    refresh_token_expire_days: int = Field(
         default=7, description="Refresh token expiration in days"
     )
     

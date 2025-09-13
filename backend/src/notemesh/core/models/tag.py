@@ -35,6 +35,14 @@ class Tag(BaseModel):
 
     created_by_user: Mapped["User"] = relationship("User")
 
+    # Many-to-many relationship with notes through note_tags
+    notes: Mapped[List["Note"]] = relationship(
+        "Note",
+        secondary="note_tags",
+        back_populates="tags",
+        doc="Notes that have this tag"
+    )
+
     __table_args__ = (
         UniqueConstraint("name", name="uq_tags_name"),
         Index("idx_tags_name", "name"),

@@ -16,6 +16,10 @@ from notemesh.core.models import BaseModel
 from notemesh.config import settings
 from dotenv import load_dotenv
 
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+
 # Load project .env (adjust path if your layout differs)
 project_root = os.path.join(os.path.dirname(__file__), "..", "..")
 load_dotenv(os.path.join(project_root, ".env"))
@@ -32,10 +36,6 @@ else:
 
 if sync_db_url:
     config.set_main_option("sqlalchemy.url", sync_db_url)
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
 
 # Override the sqlalchemy.url from config if environment variable exists
 if settings.database_url:
