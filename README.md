@@ -371,42 +371,16 @@ Additional services (if started separately):
 - **Database Admin (Adminer)**: http://localhost:8080
 - **Redis Admin**: http://localhost:8081
 
-## 🚀 Postman Testing
-
-Import `NoteMesh_API_Collection.postman_collection.json` to get:
-- **Alice Johnson** (Researcher): 4 academic notes
-- **Bob Smith** (Developer): 3 technical notes
-- **Carol Wilson** (Manager): 3 project management notes
-- **Complete sharing examples** between all users
-- **Full API workflow testing**
-
-## 📈 Project Status
-
-### ✅ Completed (100%)
-- Backend API with all endpoints
-- Frontend web interface
-- User authentication system
-- Note CRUD operations with hyperlinks
-- Search and filtering
-- Note sharing with permissions
-- Docker containerization
-- CI/CD pipeline
-- Postman collection with test data
-- Comprehensive documentation
-
-### Requirements Compliance
-✅ **Modular microservices architecture**
-✅ **PostgreSQL + Redis hybrid database**
-✅ **JWT authentication & authorization**
-✅ **Note sharing with permission control**
-✅ **Full-text search and tag filtering**
-✅ **Web-based responsive frontend**
-✅ **Docker containerization**
-✅ **CI/CD pipeline (GitHub Actions)**
-✅ **OpenAPI/Swagger documentation**
-✅ **Health monitoring endpoints**
-✅ **3 users with 10 notes (Postman collection)**
 
 ## 📄 License
+The MIT License (MIT)
 
-This project is part of an academic assignment and is intended for educational purposes.
+Copyright © 2025 Cosmo D'Antuono
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
