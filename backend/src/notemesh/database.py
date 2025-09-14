@@ -1,16 +1,15 @@
 # Database connection setup
-import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 
 from .core.models.base import BaseModel
+from .config import get_settings
 
-# Database URL from env
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/notemesh")
+# Get settings
+settings = get_settings()
 
-# Create async engine
-ECHO_SQL = os.getenv("ECHO_SQL", "False").lower() in ("true", "1", "yes")
-engine = create_async_engine(DATABASE_URL, echo=ECHO_SQL)
+# Create async engine using settings
+engine = create_async_engine(settings.database_url, echo=settings.database_echo)
 
 # Session factory
 AsyncSessionLocal = async_sessionmaker(
