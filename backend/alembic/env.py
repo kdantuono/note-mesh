@@ -64,12 +64,12 @@ _load_dotenv_safe(dotenv_path)
 # import the application's metadata so autogenerate can see models
 try:
     # Import all models to ensure they're registered with the metadata
-    from notemesh.core.models.base import BaseModel
-    from notemesh.core.models.user import User
-    from notemesh.core.models.note import Note
-    from notemesh.core.models.tag import Tag, NoteTag
-    from notemesh.core.models.share import Share
-    from notemesh.core.models.refresh_token import RefreshToken
+    from src.notemesh.core.models.base import BaseModel
+    from src.notemesh.core.models.user import User
+    from src.notemesh.core.models.note import Note
+    from src.notemesh.core.models.tag import Tag, NoteTag
+    from src.notemesh.core.models.share import Share
+    from src.notemesh.core.models.refresh_token import RefreshToken
 
     target_metadata = BaseModel.metadata
 except Exception as e:

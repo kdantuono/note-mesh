@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from datetime import datetime, timedelta
 import secrets
 
-from sqlalchemy import String, Boolean, DateTime, Index, ForeignKey
+from sqlalchemy import String, Boolean, DateTime, Index, ForeignKey, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,6 +39,11 @@ class RefreshToken(BaseModel):
     user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
 
     __table_args__ = (
+        # Enforce max lengths in SQLite too
+        CheckConstraint("length(token) <= 255", name="ck_refresh_token_len"),
+        CheckConstraint("device_identifier IS NULL OR length(device_identifier) <= 255", name="ck_refresh_device_len"),
+        CheckConstraint("created_from_ip IS NULL OR length(created_from_ip) <= 45", name="ck_refresh_ip_len"),
+        CheckConstraint("revocation_reason IS NULL OR length(revocation_reason) <= 100", name="ck_refresh_reason_len"),
         Index("idx_refresh_tokens_token", "token"),
         Index("idx_refresh_tokens_user_id", "user_id"),
         Index("idx_refresh_tokens_is_active", "is_active"),
