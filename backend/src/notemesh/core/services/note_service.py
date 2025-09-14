@@ -1,17 +1,21 @@
 """Note service implementation."""
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Iterable
 from uuid import UUID
 import re
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, Session
+from sqlalchemy.exc import IntegrityError
 
 from .interfaces import INoteService
 from ..repositories.note_repository import NoteRepository
 from ..schemas.notes import NoteCreate, NoteUpdate, NoteResponse, NoteListResponse, NoteListItem
 from ..models.tag import Tag
+from notemesh.core.models.tag import Tag as CoreTag, NoteTag
+from notemesh.core.models.note import Note
+from notemesh.core.models.user import User
 
 
 class NoteService(INoteService):
@@ -267,3 +271,40 @@ class NoteService(INoteService):
             created_at=note.created_at,
             updated_at=note.updated_at
         )
+
+
+def _get_or_create_tag_by_name(session: Session, name: str, created_by: User | None) -> Tag:
+    norm = Tag.normalize_name(name)
+    tag = session.query(Tag).filter_by(name=norm).one_or_none()
+    if tag:
+        return tag
+
+    tag = Tag(name=norm, created_by_user_id=(created_by.id if created_by else None))
+    session.add(tag)
+    try:
+        session.flush()  # forza INSERT per catturare UniqueConstraint race
+        return tag
+    except IntegrityError:
+        session.rollback()
+        # qualcun altro l'ha creato nel frattempo: ricarica
+        return session.query(Tag).filter_by(name=norm).one()
+
+
+def attach_tags_to_note(session: Session, note: Note, tag_names: Iterable[str], user: User | None) -> list[Tag]:
+    names = {Tag.normalize_name(n) for n in tag_names if Tag.normalize_name(n)}
+    if not names:
+        return []
+
+    tags: list[Tag] = []
+    for n in names:
+        tag = _get_or_create_tag_by_name(session, n, user)
+        # Evita duplicati di associazione (coperto anche da UniqueConstraint)
+        already = any(nt.tag_id == tag.id for nt in note.note_tags)
+        if not already:
+            # Usa association object per valorizzare i metadati
+            tag.note_tags.append(NoteTag(note=note, tagged_by_user_id=(user.id if user else None)))
+        tags.append(tag)
+
+    # opzionale: flush per materializzare gli INSERT in note_tags e aggiornare usage_count via eventi
+    session.flush()
+    return tags

@@ -6,6 +6,8 @@ from datetime import datetime
 from sqlalchemy import String, Integer, Index, ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import event
+from sqlalchemy.orm import attributes as orm_attributes
 
 from .base import BaseModel
 
@@ -24,7 +26,7 @@ class Tag(BaseModel):
     usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     color: Mapped[str | None] = mapped_column(String(7), nullable=True)  # hex colors
 
-    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
@@ -34,18 +36,21 @@ class Tag(BaseModel):
         "NoteTag", back_populates="tag", cascade="all, delete-orphan"
     )
 
-    created_by_user: Mapped["User"] = relationship("User")
+    created_by_user: Mapped["User" | None] = relationship("User")
 
     # Many-to-many relationship with notes through note_tags
     notes: Mapped[List["Note"]] = relationship(
         "Note",
         secondary="note_tags",
         back_populates="tags",
+        lazy="selectin",
+        overlaps="note_tags",
         doc="Notes that have this tag"
     )
 
     __table_args__ = (
         UniqueConstraint("name", name="uq_tags_name"),
+        CheckConstraint("name = lower(name)", name="ck_tags_name_lowercase"),
         # Enforce max lengths at DB level even on SQLite
         CheckConstraint("length(name) <= 50", name="ck_tags_name_len"),
         CheckConstraint("description IS NULL OR length(description) <= 200", name="ck_tags_description_len"),
@@ -80,6 +85,15 @@ class Tag(BaseModel):
         return self.usage_count >= 10
 
 
+# Normalizza sempre il nome prima di INSERT/UPDATE
+@event.listens_for(Tag, "before_insert", propagate=True)
+def _normalize_tag_name_before_insert(mapper, connection, target: Tag):
+    target.name = Tag.normalize_name(target.name)
+
+@event.listens_for(Tag, "before_update", propagate=True)
+def _normalize_tag_name_before_update(mapper, connection, target: Tag):
+    target.name = Tag.normalize_name(target.name)
+
 class NoteTag(BaseModel):
     """Links notes to tags."""
 
@@ -92,14 +106,15 @@ class NoteTag(BaseModel):
         UUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), nullable=False
     )
 
-    tagged_by_user_id: Mapped[uuid.UUID] = mapped_column(
+    tagged_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     tagged_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
-    note: Mapped["Note"] = relationship("Note", back_populates="note_tags")
-    tag: Mapped["Tag"] = relationship("Tag", back_populates="note_tags")
-    tagged_by_user: Mapped["User"] = relationship("User")
+    # Relationships
+    note: Mapped["Note"] = relationship("Note", back_populates="note_tags", overlaps="tags,notes")
+    tag: Mapped["Tag"] = relationship("Tag", back_populates="note_tags", overlaps="tags,notes")
+    tagged_by_user: Mapped["User" | None] = relationship("User")
 
     __table_args__ = (
         UniqueConstraint("note_id", "tag_id", name="uq_note_tags_note_tag"),
@@ -110,3 +125,20 @@ class NoteTag(BaseModel):
 
     def __repr__(self) -> str:
         return f"<NoteTag(note_id={self.note_id}, tag_id={self.tag_id})>"
+
+# Mantieni usage_count coerente quando si aggiungono/rimuovono associazioni
+@event.listens_for(Tag.note_tags, "append")
+def _tag_usage_on_append(tag: Tag, note_tag: "NoteTag", initiator):
+    tag.usage_count = (tag.usage_count or 0) + 1
+
+@event.listens_for(Tag.note_tags, "remove")
+def _tag_usage_on_remove(tag: Tag, note_tag: "NoteTag", initiator):
+    tag.usage_count = max(0, (tag.usage_count or 0) - 1)
+
+# Initialize Tag relationship collections to avoid accidental lazy-load on first access
+@event.listens_for(Tag, "init", propagate=True)
+def _init_tag_collections(target, args, kwargs):
+    if "notes" not in kwargs:
+        orm_attributes.set_committed_value(target, "notes", [])
+    if "note_tags" not in kwargs:
+        orm_attributes.set_committed_value(target, "note_tags", [])

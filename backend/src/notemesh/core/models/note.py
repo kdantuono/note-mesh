@@ -6,6 +6,8 @@ from datetime import datetime
 from sqlalchemy import String, Text, Integer, Index, ForeignKey, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import event
+from sqlalchemy.orm import attributes as orm_attributes
 from pydantic import HttpUrl
 
 from .base import BaseModel
@@ -60,8 +62,22 @@ class Note(BaseModel):
         "Tag",
         secondary="note_tags",
         back_populates="notes",
+        lazy="selectin",
+        overlaps="note_tags",
         doc="Tags associated with this note"
     )
+
+
+# Ensure relationship collections are initialized to avoid implicit lazy loads
+@event.listens_for(Note, "init", propagate=True)
+def _init_note_collections(target, args, kwargs):
+    # Only set if not provided explicitly
+    if "tags" not in kwargs:
+        orm_attributes.set_committed_value(target, "tags", [])
+    if "note_tags" not in kwargs:
+        orm_attributes.set_committed_value(target, "note_tags", [])
+    if "shares" not in kwargs:
+        orm_attributes.set_committed_value(target, "shares", [])
 
     # Database indexes for performance
     __table_args__ = (
