@@ -297,10 +297,23 @@ class ApiClient {
 
         console.log('Sharing payload (single user):', payload);
 
-        return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        try {
+            return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            // Enhance error messages for sharing-specific problems
+            if (error.message.includes('500')) {
+                throw new Error(`Could not share with user "${username}". The user may not exist in the system, or there may be a server issue.`);
+            } else if (error.message.includes('404')) {
+                throw new Error('Note not found or you do not have permission to share it.');
+            } else if (error.message.includes('403')) {
+                throw new Error('You do not have permission to share this note.');
+            }
+            // Re-throw original error for other cases
+            throw error;
+        }
     }
 
     // Share note with multiple users in a single API call (more efficient)
@@ -330,10 +343,27 @@ class ApiClient {
 
         console.log('Sharing payload (multiple users):', payload);
 
-        return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        try {
+            return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            // Enhance error messages for sharing-specific problems
+            if (error.message.includes('500')) {
+                if (usernames.length === 1) {
+                    throw new Error(`Could not share with user "${usernames[0]}". The user may not exist in the system, or there may be a server issue.`);
+                } else {
+                    throw new Error(`Could not share with one or more users: ${usernames.join(', ')}. Some users may not exist in the system, or there may be a server issue.`);
+                }
+            } else if (error.message.includes('404')) {
+                throw new Error('Note not found or you do not have permission to share it.');
+            } else if (error.message.includes('403')) {
+                throw new Error('You do not have permission to share this note.');
+            }
+            // Re-throw original error for other cases
+            throw error;
+        }
     }
 
     // Get shares (both given and received)

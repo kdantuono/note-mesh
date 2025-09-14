@@ -517,7 +517,17 @@ class NotesManager {
         } catch (error) {
             console.error('Failed to share with users:', error);
             console.error('Share data:', { noteId, usersList });
-            showToast('Note saved, but sharing failed: ' + error.message, TOAST_TYPES.WARNING);
+
+            // Provide more helpful error messages
+            let errorMessage = 'Note saved, but sharing failed: ' + error.message;
+
+            if (error.message.includes('may not exist in the system')) {
+                errorMessage += '\n\nTip: Make sure the username is exactly correct and that the user has an account on this system.';
+            } else if (error.message.includes('server issue')) {
+                errorMessage += '\n\nTry again in a few moments. If the problem persists, contact support.';
+            }
+
+            showToast(errorMessage, TOAST_TYPES.WARNING);
         }
     }
 
