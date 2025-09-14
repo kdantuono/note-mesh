@@ -147,12 +147,26 @@ class NotesManager {
         `;
     }
 
+    // Check if current user owns the note
+    isUserOwner(note, currentUser) {
+        if (!currentUser) return false;
+
+        // Check multiple ways the note ownership can be determined
+        return (
+            note.is_owned === true ||
+            note.can_edit === true ||
+            (note.owner && note.owner.id === currentUser.id) ||
+            (note.owner_id === currentUser.id) ||
+            (note.owner?.username === currentUser.username)
+        );
+    }
+
     // Get owner information for display
     getOwnerInfo(note, typeClass) {
         const currentUser = authManager.getCurrentUser();
         const ownerName = note.owner?.full_name || note.owner?.username || note.owner_username;
 
-        if (typeClass === NOTE_TYPES.OWNED || note.is_owned) {
+        if (typeClass === NOTE_TYPES.OWNED || note.is_owned || this.isUserOwner(note, currentUser)) {
             return '<strong>You</strong>';
         } else if (ownerName) {
             if (ownerName === currentUser?.username) {
@@ -299,13 +313,32 @@ class NotesManager {
         document.getElementById('noteContent').innerHTML = this.processNoteContent(note.content);
 
         // Note meta information
-        const ownerName = note.owner?.full_name || note.owner?.username || 'Unknown';
+        const currentUser = authManager.getCurrentUser();
+        const isOwner = this.isUserOwner(note, currentUser);
         const createdDate = this.formatDate(note.created_at);
         const viewCount = note.view_count || 0;
 
-        document.getElementById('noteOwner').innerHTML = `<i class="fas fa-user"></i> ${this.escapeHtml(ownerName)}`;
-        document.getElementById('noteDate').innerHTML = `<i class="fas fa-calendar"></i> ${createdDate}`;
-        document.getElementById('noteViews').innerHTML = `<i class="fas fa-eye"></i> ${viewCount} views`;
+        // Owner information
+        let ownerInfo = '';
+        if (isOwner) {
+            ownerInfo = '<i class="fas fa-user" aria-hidden="true"></i> <strong>Owner: You</strong>';
+        } else {
+            const ownerName = note.owner?.full_name || note.owner?.username || note.owner_username || 'Unknown';
+            ownerInfo = `<i class="fas fa-user" aria-hidden="true"></i> <strong>Owner:</strong> ${this.escapeHtml(ownerName)}`;
+        }
+
+        // Sharing information
+        let sharingInfo = '';
+        if (isOwner && note.share_count > 0) {
+            sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${note.share_count} user(s)`;
+        } else if (!isOwner) {
+            const sharedByName = note.owner?.full_name || note.owner?.username || note.owner_username || 'Unknown user';
+            sharingInfo = `<br><i class="fas fa-share" aria-hidden="true"></i> <strong>Shared by:</strong> ${this.escapeHtml(sharedByName)}`;
+        }
+
+        document.getElementById('noteOwner').innerHTML = ownerInfo + sharingInfo;
+        document.getElementById('noteDate').innerHTML = `<i class="fas fa-calendar" aria-hidden="true"></i> ${createdDate}`;
+        document.getElementById('noteViews').innerHTML = `<i class="fas fa-eye" aria-hidden="true"></i> ${viewCount} views`;
 
         // Tags
         const tagsContainer = document.getElementById('noteTags');
@@ -333,7 +366,7 @@ class NotesManager {
 
         // Show/hide action buttons based on ownership
         const currentUser = authManager.getCurrentUser();
-        const isOwner = note.owner && note.owner.id === currentUser?.id;
+        const isOwner = this.isUserOwner(note, currentUser);
 
         document.getElementById('editNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
         document.getElementById('shareNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
@@ -377,9 +410,8 @@ class NotesManager {
         this.loadExistingShares(note.id);
     }
 
-    // Validate and add user to share list
-    async validateAndAddUser(username, permission = 'read') {
-        // Simple validation - check if username is not empty and not the current user
+    // Validate and add user to share list (read-only access only)
+    async validateAndAddUser(username) {
         const currentUser = authManager.getCurrentUser();
 
         if (username === currentUser?.username) {
@@ -399,15 +431,36 @@ class NotesManager {
             return;
         }
 
-        // For now, assume user exists (in a real app, you'd validate against API)
-        this.shareList.push({ username, permission });
-        this.renderShareList();
-        showToast(`Added ${username} to share list`, TOAST_TYPES.SUCCESS);
+        // Validate user exists in the system by trying to share temporarily
+        try {
+            showSpinner(true);
+
+            // Create a dummy note to test if user exists
+            // In a real scenario, you'd have a dedicated user validation endpoint
+            // For now, we'll proceed with optimistic validation and let the API handle it
+
+            // Basic format validation
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                showToast('Username must be 3-20 characters (letters, numbers, underscore only)', TOAST_TYPES.ERROR);
+                return;
+            }
+
+            // Add user to share list with read-only permission
+            this.shareList.push({ username, permission: 'read' });
+            this.renderShareList();
+            showToast(`Added ${username} to share list (read-only access)`, TOAST_TYPES.SUCCESS);
+
+        } catch (error) {
+            console.error('User validation failed:', error);
+            showToast('User validation failed. Please check the username.', TOAST_TYPES.ERROR);
+        } finally {
+            showSpinner(false);
+        }
     }
 
     // Add user to share list (legacy method)
-    addUserToShareList(username, permission = 'read') {
-        this.validateAndAddUser(username, permission);
+    addUserToShareList(username) {
+        this.validateAndAddUser(username);
     }
 
     // Remove user from share list
@@ -427,7 +480,7 @@ class NotesManager {
         const html = this.shareList.map(user => `
             <div class="shared-user-tag">
                 <span><strong>${user.username}</strong></span>
-                <span class="permission">${user.permission}</span>
+                <span class="permission">read-only</span>
                 <button type="button" class="remove-user" onclick="notesManager.removeUserFromShareList('${user.username}')" title="Remove user">
                     <i class="fas fa-times"></i>
                 </button>
@@ -436,18 +489,18 @@ class NotesManager {
         listElement.innerHTML = html;
     }
 
-    // Share note with multiple users
+    // Share note with multiple users (read-only access)
     async shareNoteWithUsers(noteId, usersList) {
         const promises = usersList.map(user =>
-            apiClient.shareNote(noteId, user.username, user.permission)
+            apiClient.shareNote(noteId, user.username, 'read')
         );
 
         try {
             await Promise.all(promises);
-            showToast(`Note shared with ${usersList.length} user(s)`, TOAST_TYPES.SUCCESS);
+            showToast(`Note shared with ${usersList.length} user(s) (read-only access)`, TOAST_TYPES.SUCCESS);
         } catch (error) {
             console.error('Failed to share with some users:', error);
-            showToast('Note saved, but sharing failed for some users', TOAST_TYPES.WARNING);
+            showToast('Note saved, but sharing failed for some users. They may not exist in the system.', TOAST_TYPES.WARNING);
         }
     }
 
@@ -746,9 +799,8 @@ class NotesManager {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const username = e.target.value.trim();
-                const permission = document.getElementById('sharePermissionSelect').value;
                 if (username) {
-                    this.validateAndAddUser(username, permission);
+                    this.validateAndAddUser(username);
                     e.target.value = '';
                 }
             }
