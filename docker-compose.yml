@@ -20,14 +20,14 @@ services:
     networks:
       - notemesh-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-notemesh} -d ${POSTGRES_DB:-notemesh}"]
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # Redis Cache/Session Store
   redis:
-    image: redis:7
+    image: redis:7-alpine
     container_name: notemesh-redis
     restart: unless-stopped
     ports:
@@ -37,7 +37,7 @@ services:
     networks:
       - notemesh-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -74,7 +74,7 @@ services:
       - ./backend/alembic:/app/alembic
       - ./backend/alembic.ini:/app/alembic.ini
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -108,9 +108,25 @@ services:
     depends_on:
       - redis
 
+  # NoteMesh Frontend
+  frontend:
+    image: nginx:alpine
+    container_name: notemesh-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - notemesh-network
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:
+
 
 networks:
   notemesh-network:
