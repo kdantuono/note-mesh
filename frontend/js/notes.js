@@ -365,9 +365,6 @@ class NotesManager {
         }
 
         // Show/hide action buttons based on ownership
-        const currentUser = authManager.getCurrentUser();
-        const isOwner = this.isUserOwner(note, currentUser);
-
         document.getElementById('editNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
         document.getElementById('shareNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
         document.getElementById('deleteNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
