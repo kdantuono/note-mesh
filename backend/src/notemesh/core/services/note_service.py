@@ -32,12 +32,20 @@ class NoteService(INoteService):
         content_tags = self._extract_tags_from_content(request.content)
         all_tags = set(content_tags + (request.tags or []))
 
+        # Extract hyperlinks from content automatically
+        content_links = self._extract_hyperlinks_from_text(request.content)
+
+        # Merge explicit hyperlinks with extracted ones
+        all_hyperlinks = list(set(
+            [str(link) for link in request.hyperlinks] + content_links
+        ))
+
         # Create note
         note_data = {
             "title": request.title,
             "content": request.content,
             "is_public": request.is_public,
-            "hyperlinks": request.hyperlinks,
+            "hyperlinks": all_hyperlinks,
             "owner_id": user_id,
         }
 
@@ -71,10 +79,27 @@ class NoteService(INoteService):
             update_data["title"] = request.title
         if request.content is not None:
             update_data["content"] = request.content
-        if request.hyperlinks is not None:
-            update_data["hyperlinks"] = request.hyperlinks
         if request.is_public is not None:
             update_data["is_public"] = request.is_public
+
+        # Handle hyperlinks: extract from content and merge with explicit ones
+        if request.content is not None or request.hyperlinks is not None:
+            # Extract hyperlinks from content if content was updated
+            content_links = []
+            if request.content is not None:
+                content_links = self._extract_hyperlinks_from_text(request.content)
+
+            # Get explicit hyperlinks or keep existing ones
+            explicit_links = []
+            if request.hyperlinks is not None:
+                explicit_links = [str(link) for link in request.hyperlinks]
+            else:
+                # Keep existing hyperlinks if none provided
+                explicit_links = [str(link) for link in (note.hyperlinks or [])]
+
+            # Merge and deduplicate
+            all_hyperlinks = list(set(content_links + explicit_links))
+            update_data["hyperlinks"] = all_hyperlinks
 
         # Update note
         updated_note = await self.note_repo.update_note(note_id, user_id, update_data)
@@ -267,6 +292,14 @@ class NoteService(INoteService):
             created_at=note.created_at,
             updated_at=note.updated_at,
         )
+
+    def _extract_hyperlinks_from_text(self, text: str) -> List[str]:
+        """Extract hyperlinks from text content using regex."""
+        import re
+
+        url_pattern = r'https?://[^\s<>":' "'" "`|(){}[\]]*"
+        urls = re.findall(url_pattern, text, re.IGNORECASE)
+        return list(set(urls))
 
 
 def _get_or_create_tag_by_name(session: Session, name: str, created_by: User | None) -> Tag:
