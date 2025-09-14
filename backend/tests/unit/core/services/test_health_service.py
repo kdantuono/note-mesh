@@ -1,5 +1,6 @@
 import asyncio
 import types
+
 import pytest
 
 from src.notemesh.core.services.health_service import HealthService
@@ -8,6 +9,7 @@ from src.notemesh.core.services.health_service import HealthService
 class FakeScalarResult:
     def __init__(self, scalar_value):
         self._scalar_value = scalar_value
+
     def scalar(self):
         return self._scalar_value
 
@@ -16,6 +18,7 @@ class FakeSession:
     def __init__(self, ok=True):
         self.ok = ok
         self.executed = []
+
     async def execute(self, stmt):
         self.executed.append(stmt)
         if self.ok:
@@ -29,6 +32,7 @@ class DummyRedis:
         self.delay = delay
         self.closed = False
         self.pings = 0
+
     async def ping(self):
         self.pings += 1
         if self.delay:
@@ -36,6 +40,7 @@ class DummyRedis:
         if not self.ok:
             raise RuntimeError("redis down")
         return True
+
     async def aclose(self):
         self.closed = True
 
@@ -47,6 +52,7 @@ async def test_get_health_status_all_ok(monkeypatch):
 
     # Patch redis.from_url to return DummyRedis
     import src.notemesh.core.services.health_service as hs
+
     monkeypatch.setattr(hs.redis, "from_url", lambda url: DummyRedis(ok=True), raising=True)
 
     resp = await svc.get_health_status()
@@ -61,6 +67,7 @@ async def test_get_health_status_db_down(monkeypatch):
     svc = HealthService(session)
 
     import src.notemesh.core.services.health_service as hs
+
     monkeypatch.setattr(hs.redis, "from_url", lambda url: DummyRedis(ok=True), raising=True)
 
     resp = await svc.get_health_status()
@@ -75,6 +82,7 @@ async def test_get_health_status_redis_down(monkeypatch):
     svc = HealthService(session)
 
     import src.notemesh.core.services.health_service as hs
+
     monkeypatch.setattr(hs.redis, "from_url", lambda url: DummyRedis(ok=False), raising=True)
 
     resp = await svc.get_health_status()

@@ -1,6 +1,7 @@
 """Unit tests for ShareRepository without a real DB."""
 
 import uuid
+
 import pytest
 
 from src.notemesh.core.repositories.share_repository import ShareRepository
@@ -26,14 +27,19 @@ class FakeScalarResult:
         class _It:
             def __init__(self, data):
                 self._data = data
+
             def all(self):
                 return self._data
+
             def __iter__(self):
                 return iter(self._data)
+
             def __len__(self):
                 return len(self._data)
+
             def __getitem__(self, idx):
                 return self._data[idx]
+
         return _It(self._scalars_list)
 
 
@@ -71,12 +77,14 @@ async def test_create_get_list_and_revoke_share():
     # create_share -> commit+refresh
     session = FakeSession(results_iter=[])
     repo = ShareRepository(session)
-    created = await repo.create_share({
-        "id": share_id,
-        "note_id": note_id,
-        "shared_by_user_id": owner,
-        "shared_with_user_id": share_obj.shared_with,
-    })
+    created = await repo.create_share(
+        {
+            "id": share_id,
+            "note_id": note_id,
+            "shared_by_user_id": owner,
+            "shared_with_user_id": share_obj.shared_with,
+        }
+    )
     assert session.added and session.commits == 1 and session.refreshed
 
     # get_by_id -> returns the dummy when present

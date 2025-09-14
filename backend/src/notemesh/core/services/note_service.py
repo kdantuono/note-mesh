@@ -1,21 +1,22 @@
 """Note service implementation."""
 
-from typing import List, Optional, Dict, Iterable
-from uuid import UUID
 import re
+from typing import Dict, Iterable, List, Optional
+from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session, selectinload
 
-from .interfaces import INoteService
-from ..repositories.note_repository import NoteRepository
-from ..schemas.notes import NoteCreate, NoteUpdate, NoteResponse, NoteListResponse, NoteListItem
-from ..models.tag import Tag
-from ..models.tag import Tag as CoreTag, NoteTag
 from ..models.note import Note
+from ..models.tag import NoteTag
+from ..models.tag import Tag
+from ..models.tag import Tag as CoreTag
 from ..models.user import User
+from ..repositories.note_repository import NoteRepository
+from ..schemas.notes import NoteCreate, NoteListItem, NoteListResponse, NoteResponse, NoteUpdate
+from .interfaces import INoteService
 
 
 class NoteService(INoteService):
@@ -37,7 +38,7 @@ class NoteService(INoteService):
             "content": request.content,
             "is_public": request.is_public,
             "hyperlinks": request.hyperlinks,
-            "owner_id": user_id
+            "owner_id": user_id,
         }
 
         note = await self.note_repo.create_note(note_data)
@@ -46,16 +47,15 @@ class NoteService(INoteService):
         if all_tags:
             await self._add_tags_to_note(note.id, list(all_tags))
 
-        return self._note_to_response(note, user_id, override_tags=list(all_tags) if all_tags else [])
+        return self._note_to_response(
+            note, user_id, override_tags=list(all_tags) if all_tags else []
+        )
 
     async def get_note(self, note_id: UUID, user_id: UUID) -> NoteResponse:
         """Get note by ID."""
         note = await self.note_repo.get_by_id_and_user(note_id, user_id)
         if not note:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Note not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
 
         return self._note_to_response(note, user_id)
 
@@ -63,10 +63,7 @@ class NoteService(INoteService):
         """Update existing note."""
         note = await self.note_repo.get_by_id_and_user(note_id, user_id)
         if not note:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Note not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
 
         # Prepare update data
         update_data = {}
@@ -105,7 +102,7 @@ class NoteService(INoteService):
         user_id: UUID,
         page: int = 1,
         per_page: int = 20,
-        tag_filter: Optional[List[str]] = None
+        tag_filter: Optional[List[str]] = None,
     ) -> NoteListResponse:
         """List user notes with pagination."""
         if page < 1:
@@ -120,10 +117,7 @@ class NoteService(INoteService):
         note_responses = [self._note_to_list_item(note, user_id) for note in notes]
 
         return NoteListResponse.create(
-            items=note_responses,
-            total=total_count,
-            page=page,
-            per_page=per_page
+            items=note_responses, total=total_count, page=page, per_page=per_page
         )
 
     async def validate_hyperlinks(self, hyperlinks: List[str]) -> Dict[str, bool]:
@@ -131,7 +125,7 @@ class NoteService(INoteService):
         import aiohttp
 
         url_pattern = re.compile(
-            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
         )
 
         results = {}
@@ -156,13 +150,14 @@ class NoteService(INoteService):
 
     def _extract_tags_from_content(self, content: str) -> List[str]:
         """Extract hashtags from note content."""
-        hashtag_pattern = re.compile(r'#(\w+)')
+        hashtag_pattern = re.compile(r"#(\w+)")
         matches = hashtag_pattern.findall(content)
         return list(set(matches))  # Remove duplicates
 
     async def _add_tags_to_note(self, note_id: UUID, tag_names: List[str]):
         """Add tags to a note."""
-        from sqlalchemy import select, and_
+        from sqlalchemy import and_, select
+
         from ..models.tag import NoteTag
 
         for tag_name in tag_names:
@@ -193,6 +188,7 @@ class NoteService(INoteService):
     async def _clear_note_tags(self, note_id: UUID):
         """Remove all tags from a note."""
         from sqlalchemy import delete
+
         from ..models.tag import NoteTag
 
         # Delete all note-tag associations for this note
@@ -208,7 +204,7 @@ class NoteService(INoteService):
         else:
             # Safe access to potentially lazy-loaded attributes
             tags = []
-            if hasattr(note, 'tags'):
+            if hasattr(note, "tags"):
                 try:
                     tags = [tag.name for tag in note.tags] if note.tags else []
                 except Exception:
@@ -223,7 +219,7 @@ class NoteService(INoteService):
             content=note.content,
             tags=tags,
             hyperlinks=note.hyperlinks or [],
-            is_public=getattr(note, 'is_public', False),
+            is_public=getattr(note, "is_public", False),
             owner_id=note.owner_id,
             owner_username=owner_username,
             is_shared=current_user_id != note.owner_id if current_user_id else False,
@@ -231,8 +227,8 @@ class NoteService(INoteService):
             can_edit=current_user_id == note.owner_id if current_user_id else False,
             created_at=note.created_at,
             updated_at=note.updated_at,
-            view_count=getattr(note, 'view_count', 0),
-            share_count=0  # TODO: calculate actual share count
+            view_count=getattr(note, "view_count", 0),
+            share_count=0,  # TODO: calculate actual share count
         )
 
     def _note_to_list_item(self, note, current_user_id=None, override_tags=None) -> NoteListItem:
@@ -243,7 +239,7 @@ class NoteService(INoteService):
         else:
             # Safe access to potentially lazy-loaded attributes
             tags = []
-            if hasattr(note, 'tags'):
+            if hasattr(note, "tags"):
                 try:
                     tags = [tag.name for tag in note.tags] if note.tags else []
                 except:
@@ -269,7 +265,7 @@ class NoteService(INoteService):
             is_owned=current_user_id == note.owner_id if current_user_id else False,
             can_edit=current_user_id == note.owner_id if current_user_id else False,
             created_at=note.created_at,
-            updated_at=note.updated_at
+            updated_at=note.updated_at,
         )
 
 
@@ -290,7 +286,9 @@ def _get_or_create_tag_by_name(session: Session, name: str, created_by: User | N
         return session.query(Tag).filter_by(name=norm).one()
 
 
-def attach_tags_to_note(session: Session, note: Note, tag_names: Iterable[str], user: User | None) -> list[Tag]:
+def attach_tags_to_note(
+    session: Session, note: Note, tag_names: Iterable[str], user: User | None
+) -> list[Tag]:
     names = {Tag.normalize_name(n) for n in tag_names if Tag.normalize_name(n)}
     if not names:
         return []

@@ -3,8 +3,8 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import HTTPException, status, Depends, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..security import get_user_id_from_token
 
@@ -20,22 +20,19 @@ class JWTBearer(HTTPBearer):
         if credentials:
             if credentials.scheme != "Bearer":
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid authentication scheme"
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Invalid authentication scheme"
                 )
 
             user_id = get_user_id_from_token(credentials.credentials)
             if not user_id:
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid token or expired token"
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token or expired token"
                 )
 
             return user_id
         else:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid authorization code"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid authorization code"
             )
 
 

@@ -1,12 +1,12 @@
 # Tag models for organizing notes
 import uuid
-from typing import List, TYPE_CHECKING, Optional
 from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String, Integer, Index, ForeignKey, UniqueConstraint, CheckConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import event
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, UniqueConstraint, event
+from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import attributes as orm_attributes
+from sqlalchemy.orm import mapped_column, relationship
 
 from .base import BaseModel
 from .types import GUID
@@ -27,9 +27,7 @@ class Tag(BaseModel):
     color: Mapped[str | None] = mapped_column(String(7), nullable=True)  # hex colors
 
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        GUID(),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True
+        GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     note_tags: Mapped[List["NoteTag"]] = relationship(
@@ -49,7 +47,7 @@ class Tag(BaseModel):
         back_populates="tags",
         lazy="selectin",
         overlaps="note_tags",
-        doc="Notes that have this tag"
+        doc="Notes that have this tag",
     )
 
     __table_args__ = (
@@ -57,7 +55,9 @@ class Tag(BaseModel):
         CheckConstraint("name = lower(name)", name="ck_tags_name_lowercase"),
         # Enforce max lengths at DB level even on SQLite
         CheckConstraint("length(name) <= 50", name="ck_tags_name_len"),
-        CheckConstraint("description IS NULL OR length(description) <= 200", name="ck_tags_description_len"),
+        CheckConstraint(
+            "description IS NULL OR length(description) <= 200", name="ck_tags_description_len"
+        ),
         CheckConstraint("color IS NULL OR length(color) <= 7", name="ck_tags_color_len"),
         Index("idx_tags_name", "name"),
         Index("idx_tags_usage_count", "usage_count"),
@@ -94,9 +94,11 @@ class Tag(BaseModel):
 def _normalize_tag_name_before_insert(mapper, connection, target: Tag):
     target.name = Tag.normalize_name(target.name)
 
+
 @event.listens_for(Tag, "before_update", propagate=True)
 def _normalize_tag_name_before_update(mapper, connection, target: Tag):
     target.name = Tag.normalize_name(target.name)
+
 
 class NoteTag(BaseModel):
     """Links notes to tags."""
@@ -116,8 +118,12 @@ class NoteTag(BaseModel):
     tagged_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     # Relationships
-    note: Mapped["Note"] = relationship("Note", back_populates="note_tags", overlaps="tags,notes", lazy="selectin")
-    tag: Mapped["Tag"] = relationship("Tag", back_populates="note_tags", overlaps="tags,notes", lazy="selectin")
+    note: Mapped["Note"] = relationship(
+        "Note", back_populates="note_tags", overlaps="tags,notes", lazy="selectin"
+    )
+    tag: Mapped["Tag"] = relationship(
+        "Tag", back_populates="note_tags", overlaps="tags,notes", lazy="selectin"
+    )
     tagged_by_user: Mapped[Optional["User"]] = relationship("User", lazy="selectin")
 
     __table_args__ = (
@@ -130,14 +136,17 @@ class NoteTag(BaseModel):
     def __repr__(self) -> str:
         return f"<NoteTag(note_id={self.note_id}, tag_id={self.tag_id})>"
 
+
 # Mantieni usage_count coerente quando si aggiungono/rimuovono associazioni
 @event.listens_for(Tag.note_tags, "append")
 def _tag_usage_on_append(tag: Tag, note_tag: "NoteTag", initiator):
     tag.usage_count = (tag.usage_count or 0) + 1
 
+
 @event.listens_for(Tag.note_tags, "remove")
 def _tag_usage_on_remove(tag: Tag, note_tag: "NoteTag", initiator):
     tag.usage_count = max(0, (tag.usage_count or 0) - 1)
+
 
 # Initialize Tag relationship collections to avoid accidental lazy-load on first access
 @event.listens_for(Tag, "init", propagate=True)

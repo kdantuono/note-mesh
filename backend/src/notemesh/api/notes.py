@@ -6,11 +6,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..database import get_db_session
+from ..core.schemas.notes import NoteCreate, NoteListResponse, NoteResponse, NoteUpdate
 from ..core.services import NoteService
-from ..core.schemas.notes import (
-    NoteCreate, NoteUpdate, NoteResponse, NoteListResponse
-)
+from ..database import get_db_session
 from ..middleware.auth import get_current_user_id
 
 router = APIRouter(prefix="/notes", tags=["notes"])
@@ -20,7 +18,7 @@ router = APIRouter(prefix="/notes", tags=["notes"])
 async def create_note(
     request: NoteCreate,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Create a new note."""
     note_service = NoteService(session)
@@ -33,15 +31,12 @@ async def list_notes(
     per_page: int = Query(20, ge=1, le=100),
     tags: Optional[List[str]] = Query(None),
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """List user notes with optional tag filtering."""
     note_service = NoteService(session)
     return await note_service.list_user_notes(
-        user_id=current_user_id,
-        page=page,
-        per_page=per_page,
-        tag_filter=tags
+        user_id=current_user_id, page=page, per_page=per_page, tag_filter=tags
     )
 
 
@@ -49,7 +44,7 @@ async def list_notes(
 async def get_note(
     note_id: UUID,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Get a specific note."""
     note_service = NoteService(session)
@@ -61,7 +56,7 @@ async def update_note(
     note_id: UUID,
     request: NoteUpdate,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Update a note."""
     note_service = NoteService(session)
@@ -72,7 +67,7 @@ async def update_note(
 async def delete_note(
     note_id: UUID,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Delete a note."""
     note_service = NoteService(session)
@@ -82,7 +77,7 @@ async def delete_note(
 @router.get("/tags/", response_model=List[str])
 async def get_available_tags(
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Get all available tags for the user."""
     note_service = NoteService(session)
@@ -93,7 +88,7 @@ async def get_available_tags(
 async def validate_hyperlinks(
     links: List[str],
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Validate a list of hyperlinks."""
     note_service = NoteService(session)

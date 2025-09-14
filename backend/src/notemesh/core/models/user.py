@@ -3,9 +3,9 @@ User model for authentication.
 """
 
 import uuid
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
-from sqlalchemy import Boolean, String, Index, CheckConstraint
+from sqlalchemy import Boolean, CheckConstraint, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -13,8 +13,8 @@ from .types import GUID
 
 if TYPE_CHECKING:
     from .note import Note
-    from .share import Share
     from .refresh_token import RefreshToken
+    from .share import Share
 
 
 class User(BaseModel):
@@ -62,7 +62,9 @@ class User(BaseModel):
     __table_args__ = (
         # Enforce max lengths at DB level (SQLite compatible)
         CheckConstraint("length(username) <= 50", name="ck_users_username_len"),
-        CheckConstraint("full_name IS NULL OR length(full_name) <= 100", name="ck_users_full_name_len"),
+        CheckConstraint(
+            "full_name IS NULL OR length(full_name) <= 100", name="ck_users_full_name_len"
+        ),
         Index("idx_users_username", "username"),
         Index("idx_users_active", "is_active"),
     )

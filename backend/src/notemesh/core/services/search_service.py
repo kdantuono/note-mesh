@@ -1,13 +1,13 @@
 """Search service implementation."""
 
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .interfaces import ISearchService
 from ..repositories.note_repository import NoteRepository
-from ..schemas.notes import NoteSearchRequest, NoteSearchResponse, NoteResponse
+from ..schemas.notes import NoteResponse, NoteSearchRequest, NoteSearchResponse
+from .interfaces import ISearchService
 
 
 class SearchService(ISearchService):
@@ -26,18 +26,17 @@ class SearchService(ISearchService):
                 total_count=0,
                 query=request.query,
                 page=request.page or 1,
-                per_page=request.per_page or 20
+                per_page=request.per_page or 20,
             )
 
         # Use repository search
         notes = await self.note_repo.search_notes(
-            user_id=user_id,
-            query=request.query.strip(),
-            tag_filter=request.tags
+            user_id=user_id, query=request.query.strip(), tag_filter=request.tags
         )
 
         # Convert to list item format for search results
         from .note_service import NoteService
+
         note_service = NoteService(self.session)
         note_list_items = []
         for note in notes:
@@ -61,10 +60,8 @@ class SearchService(ISearchService):
             has_next=end_idx < len(note_list_items),
             has_prev=page > 1,
             query=request.query,
-            filters_applied={
-                "tag_filter": request.tags or []
-            },
-            search_time_ms=None  # Could be implemented with timing
+            filters_applied={"tag_filter": request.tags or []},
+            search_time_ms=None,  # Could be implemented with timing
         )
 
     async def index_note(self, note_id: UUID) -> bool:
@@ -90,10 +87,7 @@ class SearchService(ISearchService):
 
         # Filter tags that contain the query (case insensitive)
         query_lower = query.lower()
-        matching_tags = [
-            tag for tag in all_tags
-            if query_lower in tag.lower()
-        ]
+        matching_tags = [tag for tag in all_tags if query_lower in tag.lower()]
 
         # Sort by relevance (exact match first, then starts with, then contains)
         def tag_score(tag: str) -> int:
@@ -121,5 +115,5 @@ class SearchService(ISearchService):
             "total_notes": total_count,
             "total_tags": len(all_tags),
             "most_used_tags": all_tags[:10],  # Top 10 tags (could be improved with usage count)
-            "searchable_content": True
+            "searchable_content": True,
         }

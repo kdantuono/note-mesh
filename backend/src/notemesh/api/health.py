@@ -1,13 +1,13 @@
 """Health check API endpoints."""
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..database import get_db_session
-from ..core.services import HealthService
 from ..core.schemas.common import HealthCheckResponse
+from ..core.services import HealthService
+from ..database import get_db_session
 
 router = APIRouter(prefix="/health", tags=["health"])
 

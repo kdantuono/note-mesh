@@ -1,13 +1,13 @@
-from logging.config import fileConfig
 import os
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 from urllib.parse import quote_plus
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 # ensure backend/src is on sys.path so we can import the app metadata
 backend_root = Path(__file__).resolve().parents[1]  # backend directory
@@ -65,11 +65,11 @@ _load_dotenv_safe(dotenv_path)
 try:
     # Import all models to ensure they're registered with the metadata
     from src.notemesh.core.models.base import BaseModel
-    from src.notemesh.core.models.user import User
     from src.notemesh.core.models.note import Note
-    from src.notemesh.core.models.tag import Tag, NoteTag
-    from src.notemesh.core.models.share import Share
     from src.notemesh.core.models.refresh_token import RefreshToken
+    from src.notemesh.core.models.share import Share
+    from src.notemesh.core.models.tag import NoteTag, Tag
+    from src.notemesh.core.models.user import User
 
     target_metadata = BaseModel.metadata
 except Exception as e:

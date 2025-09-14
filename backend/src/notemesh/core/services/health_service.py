@@ -1,16 +1,16 @@
 """Health service implementation."""
 
-from typing import Dict, Any
 import asyncio
 from datetime import datetime
+from typing import Any, Dict
 
+import redis.asyncio as redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-import redis.asyncio as redis
 
-from .interfaces import IHealthService
-from ..schemas.common import HealthCheckResponse
 from ...config import get_settings
+from ..schemas.common import HealthCheckResponse
+from .interfaces import IHealthService
 
 
 class HealthService(IHealthService):
@@ -33,10 +33,7 @@ class HealthService(IHealthService):
             status=overall_status,
             timestamp=datetime.utcnow(),
             version="0.1.0",
-            checks={
-                "database": db_health,
-                "redis": redis_health
-            }
+            checks={"database": db_health, "redis": redis_health},
         )
 
     async def check_database_health(self) -> Dict[str, Any]:
@@ -49,14 +46,14 @@ class HealthService(IHealthService):
             return {
                 "connected": True,
                 "status": "healthy",
-                "response_time_ms": None  # Could be measured
+                "response_time_ms": None,  # Could be measured
             }
         except Exception as e:
             return {
                 "connected": False,
                 "status": "unhealthy",
                 "error": str(e),
-                "response_time_ms": None
+                "response_time_ms": None,
             }
 
     async def check_redis_health(self) -> Dict[str, Any]:
@@ -75,14 +72,14 @@ class HealthService(IHealthService):
             return {
                 "connected": True,
                 "status": "healthy",
-                "response_time_ms": round(response_time, 2)
+                "response_time_ms": round(response_time, 2),
             }
         except Exception as e:
             return {
                 "connected": False,
                 "status": "unhealthy",
                 "error": str(e),
-                "response_time_ms": None
+                "response_time_ms": None,
             }
 
     async def get_system_metrics(self) -> Dict[str, Any]:
@@ -93,5 +90,5 @@ class HealthService(IHealthService):
             "uptime_seconds": None,  # Could be implemented
             "memory_usage_mb": None,  # Could be implemented
             "cpu_usage_percent": None,  # Could be implemented
-            "active_connections": None  # Could be implemented
+            "active_connections": None,  # Could be implemented
         }

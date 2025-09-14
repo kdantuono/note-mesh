@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Test script to verify all imports work without database setup."""
 
-import sys
 import os
+import sys
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+
 
 def test_imports():
     """Test that all API modules can be imported without errors."""
@@ -15,29 +16,40 @@ def test_imports():
     try:
         # Test service imports
         from src.notemesh.core.services import (
-            AuthService, NoteService, SearchService,
-            SharingService, HealthService
+            AuthService,
+            HealthService,
+            NoteService,
+            SearchService,
+            SharingService,
         )
+
         print("✓ Service imports successful")
 
         # Test API router imports
         from src.notemesh.api import (
-            auth_router, notes_router, search_router,
-            sharing_router, health_router
+            auth_router,
+            health_router,
+            notes_router,
+            search_router,
+            sharing_router,
         )
+
         print("✓ Router imports successful")
 
         # Test middleware imports
-        from src.notemesh.middleware.auth import get_current_user_id, JWTBearer
+        from src.notemesh.middleware.auth import JWTBearer, get_current_user_id
+
         print("✓ Middleware imports successful")
 
         # Test schema imports
+        from src.notemesh.core.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
         from src.notemesh.core.schemas.notes import (
-            NoteCreate, NoteUpdate, NoteResponse, NoteListResponse
+            NoteCreate,
+            NoteListResponse,
+            NoteResponse,
+            NoteUpdate,
         )
-        from src.notemesh.core.schemas.auth import (
-            RegisterRequest, LoginRequest, TokenResponse
-        )
+
         print("✓ Schema imports successful")
 
         return True
@@ -45,8 +57,10 @@ def test_imports():
     except Exception as e:
         print(f"✗ Import error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def test_router_structure():
     """Test that routers have expected endpoints."""
@@ -54,13 +68,18 @@ def test_router_structure():
     print("\nTesting router structure...")
 
     try:
-        from src.notemesh.api.notes import router as notes_router
         from src.notemesh.api.auth import router as auth_router
+        from src.notemesh.api.notes import router as notes_router
         from src.notemesh.api.search import router as search_router
 
         # Check notes router paths
         notes_paths = [route.path for route in notes_router.routes]
-        expected_notes_paths = ["/notes/", "/notes/{note_id}", "/notes/tags/", "/notes/validate-links"]
+        expected_notes_paths = [
+            "/notes/",
+            "/notes/{note_id}",
+            "/notes/tags/",
+            "/notes/validate-links",
+        ]
 
         for path in expected_notes_paths:
             if path not in notes_paths:
@@ -71,7 +90,14 @@ def test_router_structure():
 
         # Check auth router paths
         auth_paths = [route.path for route in auth_router.routes]
-        expected_auth_paths = ["/auth/register", "/auth/login", "/auth/refresh", "/auth/me", "/auth/change-password", "/auth/logout"]
+        expected_auth_paths = [
+            "/auth/register",
+            "/auth/login",
+            "/auth/refresh",
+            "/auth/me",
+            "/auth/change-password",
+            "/auth/logout",
+        ]
 
         for path in expected_auth_paths:
             if path not in auth_paths:
@@ -85,8 +111,10 @@ def test_router_structure():
     except Exception as e:
         print(f"✗ Router structure test error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     print("=== NoteMesh Import Tests ===")

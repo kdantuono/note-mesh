@@ -1,10 +1,11 @@
 """Unit tests for UserRepository without DB."""
 
 import uuid
+
 import pytest
 
-from src.notemesh.core.repositories.user_repository import UserRepository
 from src.notemesh.core.models.user import User
+from src.notemesh.core.repositories.user_repository import UserRepository
 
 
 class FakeResult:
@@ -54,7 +55,11 @@ async def test_create_user():
 @pytest.mark.asyncio
 async def test_get_by_id_found_and_not_found():
     uid = uuid.uuid4()
-    session = FakeSession(FakeResult(User(id=uid, username="bob", password_hash="x", is_active=True, is_verified=True)))
+    session = FakeSession(
+        FakeResult(
+            User(id=uid, username="bob", password_hash="x", is_active=True, is_verified=True)
+        )
+    )
     repo = UserRepository(session)
     u = await repo.get_by_id(uid)
     assert isinstance(u, User)
@@ -67,7 +72,17 @@ async def test_get_by_id_found_and_not_found():
 
 @pytest.mark.asyncio
 async def test_get_by_username_found_and_not_found():
-    session = FakeSession(FakeResult(User(id=uuid.uuid4(), username="charlie", password_hash="x", is_active=True, is_verified=True)))
+    session = FakeSession(
+        FakeResult(
+            User(
+                id=uuid.uuid4(),
+                username="charlie",
+                password_hash="x",
+                is_active=True,
+                is_verified=True,
+            )
+        )
+    )
     repo = UserRepository(session)
     u = await repo.get_by_username("charlie")
     assert isinstance(u, User)
@@ -113,7 +128,13 @@ async def test_delete_user_true_false():
 
 @pytest.mark.asyncio
 async def test_is_username_taken():
-    session = FakeSession(FakeResult(User(id=uuid.uuid4(), username="zoe", password_hash="x", is_active=True, is_verified=True)))
+    session = FakeSession(
+        FakeResult(
+            User(
+                id=uuid.uuid4(), username="zoe", password_hash="x", is_active=True, is_verified=True
+            )
+        )
+    )
     repo = UserRepository(session)
     assert await repo.is_username_taken("zoe") is True
 

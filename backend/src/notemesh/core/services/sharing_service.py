@@ -1,19 +1,23 @@
 """Sharing service implementation."""
 
-from typing import List, Dict
+from typing import Dict, List
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .interfaces import ISharingService
+from ..repositories.note_repository import NoteRepository
 from ..repositories.share_repository import ShareRepository
 from ..repositories.user_repository import UserRepository
-from ..repositories.note_repository import NoteRepository
 from ..schemas.sharing import (
-    ShareRequest, ShareResponse, SharedNoteResponse,
-    ShareListRequest, ShareListResponse, ShareStatsResponse
+    SharedNoteResponse,
+    ShareListRequest,
+    ShareListResponse,
+    ShareRequest,
+    ShareResponse,
+    ShareStatsResponse,
 )
+from .interfaces import ISharingService
 
 
 class SharingService(ISharingService):
@@ -31,8 +35,7 @@ class SharingService(ISharingService):
         note = await self.note_repo.get_by_id_and_user(request.note_id, user_id)
         if not note:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Note not found or not owned by user"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Note not found or not owned by user"
             )
 
         # Verify all target users exist
@@ -41,14 +44,13 @@ class SharingService(ISharingService):
             target_user = await self.user_repo.get_by_username(username)
             if not target_user:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"User '{username}' not found"
+                    status_code=status.HTTP_404_NOT_FOUND, detail=f"User '{username}' not found"
                 )
 
             if target_user.id == user_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Cannot share note with yourself"
+                    detail="Cannot share note with yourself",
                 )
 
             # Create share
@@ -57,7 +59,7 @@ class SharingService(ISharingService):
                 "shared_by_user_id": user_id,
                 "shared_with_user_id": target_user.id,
                 "permission_level": request.permission_level,
-                "message": request.message
+                "message": request.message,
             }
 
             share = await self.share_repo.create_share(share_data)
@@ -75,23 +77,20 @@ class SharingService(ISharingService):
         access_info = await self.share_repo.check_note_access(note_id, user_id)
         if not access_info["can_read"]:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No permission to access this note"
+                status_code=status.HTTP_403_FORBIDDEN, detail="No permission to access this note"
             )
 
         # Get the note
         note = await self.note_repo.get_by_id(note_id)
         if not note:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Note not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
 
         # Get the owner info
         owner = await self.user_repo.get_by_id(note.owner_id)
 
         # Build response, filling required fields with available info/defaults
         from datetime import datetime
+
         permission_level = "write" if access_info.get("can_write") else "read"
 
         return SharedNoteResponse(
@@ -102,7 +101,9 @@ class SharingService(ISharingService):
             hyperlinks=getattr(note, "hyperlinks", []) or [],
             owner_id=note.owner_id,
             owner_username=owner.username if owner else "Unknown",
-            owner_display_name=owner.full_name if owner and hasattr(owner, "full_name") else (owner.username if owner else "Unknown"),
+            owner_display_name=owner.full_name
+            if owner and hasattr(owner, "full_name")
+            else (owner.username if owner else "Unknown"),
             shared_by_id=note.owner_id,  # Fallback to owner as sharer
             shared_by_username=owner.username if owner else "Unknown",
             permission_level=permission_level,
@@ -113,7 +114,7 @@ class SharingService(ISharingService):
             updated_at=getattr(note, "updated_at", datetime.utcnow()),
             last_accessed=None,
             can_write=access_info.get("can_write", False),
-            can_share=access_info.get("can_share", False)
+            can_share=access_info.get("can_share", False),
         )
 
     async def list_shares(self, user_id: UUID, request: ShareListRequest) -> ShareListResponse:
@@ -129,7 +130,9 @@ class SharingService(ISharingService):
         if request.type == "given":
             shares, total_count = await self.share_repo.list_shares_given(user_id, page, per_page)
         elif request.type == "received":
-            shares, total_count = await self.share_repo.list_shares_received(user_id, page, per_page)
+            shares, total_count = await self.share_repo.list_shares_received(
+                user_id, page, per_page
+            )
         else:
             # Default to given shares
             shares, total_count = await self.share_repo.list_shares_given(user_id, page, per_page)
@@ -142,7 +145,7 @@ class SharingService(ISharingService):
             page=page,
             per_page=per_page,
             total_pages=(total_count + per_page - 1) // per_page,
-            type=request.type or "given"
+            type=request.type or "given",
         )
 
     async def get_share_stats(self, user_id: UUID) -> ShareStatsResponse:
@@ -152,7 +155,7 @@ class SharingService(ISharingService):
         return ShareStatsResponse(
             shares_given=stats["shares_given"],
             shares_received=stats["shares_received"],
-            unique_notes_shared=stats["unique_notes_shared"]
+            unique_notes_shared=stats["unique_notes_shared"],
         )
 
     async def check_note_access(self, note_id: UUID, user_id: UUID) -> Dict[str, bool]:
@@ -162,6 +165,7 @@ class SharingService(ISharingService):
     def _share_to_response(self, share) -> ShareResponse:
         """Convert share model to response."""
         from datetime import datetime
+
         shared_with_user_id = getattr(share, "shared_with_user_id", None)
         if not shared_with_user_id and getattr(share, "shared_with_user", None):
             shared_with_user_id = getattr(share.shared_with_user, "id", None)
@@ -171,8 +175,13 @@ class SharingService(ISharingService):
             note_id=share.note_id,
             note_title=share.note.title if getattr(share, "note", None) else "Unknown",
             shared_with_user_id=shared_with_user_id,
-            shared_with_username=share.shared_with_user.username if getattr(share, "shared_with_user", None) else "Unknown",
-            shared_with_display_name=share.shared_with_user.full_name if getattr(share, "shared_with_user", None) and hasattr(share.shared_with_user, "full_name") else "Unknown",
+            shared_with_username=share.shared_with_user.username
+            if getattr(share, "shared_with_user", None)
+            else "Unknown",
+            shared_with_display_name=share.shared_with_user.full_name
+            if getattr(share, "shared_with_user", None)
+            and hasattr(share.shared_with_user, "full_name")
+            else "Unknown",
             permission_level=getattr(share, "permission_level", "read"),
             message=getattr(share, "message", None),
             shared_at=getattr(share, "created_at", datetime.utcnow()),

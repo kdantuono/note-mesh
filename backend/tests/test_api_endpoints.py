@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Test script to verify API endpoints are properly configured."""
 
-import sys
 import os
+import sys
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+
 
 def test_app_creation():
     """Test that the FastAPI app can be created without database connection."""
@@ -26,6 +27,7 @@ def test_app_creation():
 
         # Import app
         from src.notemesh.main import app
+
         print("✓ FastAPI app created successfully")
 
         return True
@@ -33,8 +35,10 @@ def test_app_creation():
     except Exception as e:
         print(f"✗ App creation error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def test_route_collection():
     """Test that all expected routes are registered."""
@@ -55,24 +59,24 @@ def test_route_collection():
         # Collect all routes
         routes = []
         for route in app.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
+            if hasattr(route, "path") and hasattr(route, "methods"):
                 for method in route.methods:
                     routes.append((method, route.path))
-            elif hasattr(route, 'path'):
-                routes.append(('INCLUDE', route.path))
+            elif hasattr(route, "path"):
+                routes.append(("INCLUDE", route.path))
 
         # Expected key endpoints
         expected_endpoints = [
-            ('POST', '/api/auth/register'),
-            ('POST', '/api/auth/login'),
-            ('GET', '/api/auth/me'),
-            ('POST', '/api/notes/'),
-            ('GET', '/api/notes/'),
-            ('GET', '/api/search/notes'),
-            ('GET', '/api/search/tags/suggest'),
-            ('GET', '/api/health/'),
-            ('POST', '/api/sharing/'),
-            ('GET', '/api/sharing/'),
+            ("POST", "/api/auth/register"),
+            ("POST", "/api/auth/login"),
+            ("GET", "/api/auth/me"),
+            ("POST", "/api/notes/"),
+            ("GET", "/api/notes/"),
+            ("GET", "/api/search/notes"),
+            ("GET", "/api/search/tags/suggest"),
+            ("GET", "/api/health/"),
+            ("POST", "/api/sharing/"),
+            ("GET", "/api/sharing/"),
         ]
 
         print(f"Total routes found: {len(routes)}")
@@ -102,8 +106,10 @@ def test_route_collection():
     except Exception as e:
         print(f"✗ Route collection error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     print("=== NoteMesh API Endpoint Tests ===")

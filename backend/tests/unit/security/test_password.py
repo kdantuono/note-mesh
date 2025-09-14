@@ -1,6 +1,6 @@
 """Unit tests for security/password.py"""
 
-from src.notemesh.security.password import hash_password, verify_password, needs_update
+from src.notemesh.security.password import hash_password, needs_update, verify_password
 
 
 def test_hash_and_verify_roundtrip():

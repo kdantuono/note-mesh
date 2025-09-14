@@ -1,7 +1,8 @@
 """Unit tests for RefreshTokenRepository without DB."""
 
-from datetime import datetime, timedelta, timezone
 import uuid
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from src.notemesh.core.repositories.refresh_token_repository import RefreshTokenRepository
@@ -53,12 +54,16 @@ class FakeSession:
 async def test_create_get_delete_token_and_validity():
     uid = uuid.uuid4()
     now = datetime.now(timezone.utc)
-    token_obj = DummyToken(user_id=uid, token="abc", expires_at=now + timedelta(hours=1), is_active=True)
+    token_obj = DummyToken(
+        user_id=uid, token="abc", expires_at=now + timedelta(hours=1), is_active=True
+    )
 
     # create
     create_session = FakeSession()
     repo = RefreshTokenRepository(create_session)
-    created = await repo.create_token({"user_id": uid, "token": "abc", "expires_at": token_obj.expires_at, "is_active": True})
+    created = await repo.create_token(
+        {"user_id": uid, "token": "abc", "expires_at": token_obj.expires_at, "is_active": True}
+    )
     assert create_session.added and create_session.commits == 1 and created is not None
 
     # get_by_token and is_token_valid
@@ -69,7 +74,9 @@ async def test_create_get_delete_token_and_validity():
     assert await repo2.is_token_valid("abc") is True
 
     # expired -> invalid
-    expired_token = DummyToken(user_id=uid, token="old", expires_at=now - timedelta(seconds=1), is_active=True)
+    expired_token = DummyToken(
+        user_id=uid, token="old", expires_at=now - timedelta(seconds=1), is_active=True
+    )
     repo3 = RefreshTokenRepository(FakeSession(FakeResult(expired_token)))
     assert await repo3.is_token_valid("old") is False
 
