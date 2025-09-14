@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, development ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, main, development ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,7 +39,27 @@ jobs:
 
       - name: Run tests
         working-directory: backend
-        run: pytest -q
+        run: pytest -vv -ra --durations=10
+
+      - name: Generate coverage XML
+        if: ${{ always() && hashFiles('backend/.coverage') != '' }}
+        working-directory: backend
+        run: |
+          python -m coverage xml -i -o coverage.xml
+
+      - name: Coverage summary (job summary)
+        if: ${{ always() && hashFiles('backend/coverage.xml') != '' }}
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: backend/coverage.xml
+          badge: true
+          format: markdown
+          output: file
+
+      - name: Append coverage summary to job
+        if: ${{ always() && hashFiles('code-coverage-results.md') != '' }}
+        run: |
+          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload coverage HTML
         if: always()
@@ -47,6 +67,14 @@ jobs:
         with:
           name: htmlcov
           path: backend/htmlcov
+          if-no-files-found: ignore
+
+      - name: Upload coverage XML
+        if: ${{ always() && hashFiles('backend/coverage.xml') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: backend/coverage.xml
           if-no-files-found: ignore
 
       # Non-blocking quality checks (keep visible but don't fail the build initially)
