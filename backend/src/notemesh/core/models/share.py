@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from datetime import datetime, timedelta
 from enum import Enum
 
-from sqlalchemy import String, DateTime, Index, ForeignKey, UniqueConstraint
+from sqlalchemy import String, DateTime, Index, ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,6 +38,11 @@ class Share(BaseModel):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
 
+    # Permission level for this share (read/write)
+    permission: Mapped[str] = mapped_column(
+        String(20), default="read", nullable=False
+    )
+
     status: Mapped[ShareStatus] = mapped_column(
         String(20), default=ShareStatus.ACTIVE, nullable=False
     )
@@ -56,6 +61,10 @@ class Share(BaseModel):
 
     __table_args__ = (
         UniqueConstraint("note_id", "shared_with_user_id", name="uq_shares_note_recipient"),
+        # Enforce length constraints
+        CheckConstraint("length(permission) <= 20", name="ck_shares_permission_len"),
+        CheckConstraint("length(status) <= 20", name="ck_shares_status_len"),
+        CheckConstraint("share_message IS NULL OR length(share_message) <= 500", name="ck_shares_message_len"),
         Index("idx_shares_note_id", "note_id"),
         Index("idx_shares_shared_by", "shared_by_user_id"),
         Index("idx_shares_shared_with", "shared_with_user_id"),

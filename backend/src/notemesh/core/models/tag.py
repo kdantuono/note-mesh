@@ -3,7 +3,7 @@ import uuid
 from typing import List, TYPE_CHECKING
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Index, ForeignKey, UniqueConstraint
+from sqlalchemy import String, Integer, Index, ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,6 +11,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .note import Note
+    from .user import User
 
 
 class Tag(BaseModel):
@@ -45,13 +46,17 @@ class Tag(BaseModel):
 
     __table_args__ = (
         UniqueConstraint("name", name="uq_tags_name"),
+        # Enforce max lengths at DB level even on SQLite
+        CheckConstraint("length(name) <= 50", name="ck_tags_name_len"),
+        CheckConstraint("description IS NULL OR length(description) <= 200", name="ck_tags_description_len"),
+        CheckConstraint("color IS NULL OR length(color) <= 7", name="ck_tags_color_len"),
         Index("idx_tags_name", "name"),
         Index("idx_tags_usage_count", "usage_count"),
         Index("idx_tags_created_by", "created_by_user_id"),
     )
 
     def __repr__(self) -> str:
-        return f"<Tag(name='{self.name}', usage={self.usage_count})>"
+        return f"<Tag(name='{self.name}')>"
 
     @classmethod
     def normalize_name(cls, name: str) -> str:
