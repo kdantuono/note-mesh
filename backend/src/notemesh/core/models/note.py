@@ -3,15 +3,17 @@ import uuid
 from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime
 
-from sqlalchemy import String, Text, Integer, Index, ForeignKey
+from sqlalchemy import String, Text, Integer, Index, ForeignKey, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pydantic import HttpUrl
 
 from .base import BaseModel
+from .types import HttpUrlListType
 
 if TYPE_CHECKING:
     from .user import User
-    from .tag import NoteTag
+    from .tag import Tag, NoteTag
     from .share import Share
 
 
@@ -24,7 +26,7 @@ class Note(BaseModel):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     is_public: Mapped[bool] = mapped_column(default=False, nullable=False)
 
-    hyperlinks: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String(500)), nullable=True) # links in content
+    hyperlinks: Mapped[Optional[List[HttpUrl]]] = mapped_column(HttpUrlListType, nullable=True) # links in content
 
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_viewed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
@@ -75,6 +77,8 @@ class Note(BaseModel):
 
         # Composite index for user note listing with sorting
         Index("idx_notes_owner_view_count", "owner_id", "view_count"),
+        # Enforce title max length (SQLite compatible)
+        CheckConstraint("length(title) <= 200", name="ck_notes_title_len"),
     )
 
     def __repr__(self) -> str:
@@ -84,7 +88,9 @@ class Note(BaseModel):
         Returns:
             str: String representation showing title and owner
         """
-        return f"<Note(title='{self.title[:30]}...', owner_id={self.owner_id})>"
+        # Tests expect a truncated title at 30 characters plus an ellipsis
+        truncated = self.title if len(self.title) <= 30 else (self.title[:30] + "...")
+        return f"<Note(title='{truncated}', owner_id={self.owner_id})>"
 
     @property
     def preview(self) -> str:

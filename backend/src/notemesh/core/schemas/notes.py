@@ -116,7 +116,7 @@ class NoteResponse(BaseModel):
     title: str = Field(description="Note title")
     content: str = Field(description="Note content")
     tags: List[str] = Field(description="Note tags")
-    hyperlinks: List[str] = Field(description="External hyperlinks")
+    hyperlinks: List[HttpUrl] = Field(description="External hyperlinks")
     is_public: bool = Field(description="Whether note is publicly visible")
     
     # Ownership and sharing info

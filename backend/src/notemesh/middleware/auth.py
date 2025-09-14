@@ -3,7 +3,7 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from ..security import get_user_id_from_token
@@ -15,7 +15,7 @@ class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         super(JWTBearer, self).__init__(auto_error=auto_error)
 
-    async def __call__(self, request):
+    async def __call__(self, request: Request):
         credentials: Optional[HTTPAuthorizationCredentials] = await super().__call__(request)
         if credentials:
             if credentials.scheme != "Bearer":

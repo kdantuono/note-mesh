@@ -5,7 +5,7 @@ User model for authentication.
 import uuid
 from typing import List, TYPE_CHECKING
 
-from sqlalchemy import Boolean, String, Index
+from sqlalchemy import Boolean, String, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -38,6 +38,9 @@ class User(BaseModel):
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (
+        # Enforce max lengths at DB level (SQLite compatible)
+        CheckConstraint("length(username) <= 50", name="ck_users_username_len"),
+        CheckConstraint("full_name IS NULL OR length(full_name) <= 100", name="ck_users_full_name_len"),
         Index("idx_users_username", "username"),
         Index("idx_users_active", "is_active"),
     )
