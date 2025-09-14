@@ -31,7 +31,8 @@ class NotesManager {
                     const sharedWithMe = await apiClient.getSharedWithMe(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedWithMe && sharedWithMe.shares && Array.isArray(sharedWithMe.shares)) {
                         // Backend returns 'shares' array, not 'items'
-                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedWithMe.shares, NOTE_TYPES.SHARED_WITH_ME)];
+                        const sharedNotes = sharedWithMe.shares.map(share => share.note || share);
+                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedNotes, NOTE_TYPES.SHARED_WITH_ME)];
                         notesData.total += sharedWithMe.total_count || 0;
                     }
                 } catch (error) {
@@ -44,8 +45,9 @@ class NotesManager {
                 try {
                     const sharedByMe = await apiClient.getMyShares(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedByMe && sharedByMe.shares && Array.isArray(sharedByMe.shares)) {
-                        // Backend returns 'shares' array, not 'items'
-                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedByMe.shares, NOTE_TYPES.SHARED_BY_ME)];
+                        // Backend returns 'shares' array, extract the notes from the shares
+                        const sharedNotes = sharedByMe.shares.map(share => share.note || share);
+                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedNotes, NOTE_TYPES.SHARED_BY_ME)];
                         notesData.total += sharedByMe.total_count || 0;
                     }
                 } catch (error) {
@@ -488,16 +490,34 @@ class NotesManager {
 
     // Share note with multiple users (read-only access)
     async shareNoteWithUsers(noteId, usersList) {
-        const promises = usersList.map(user =>
-            apiClient.shareNote(noteId, user.username, 'read')
-        );
-
         try {
-            await Promise.all(promises);
+            // Validate inputs before making API call
+            if (!noteId) {
+                throw new Error('Note ID is required for sharing');
+            }
+
+            if (!usersList || usersList.length === 0) {
+                console.warn('No users in share list, skipping sharing');
+                return;
+            }
+
+            // Extract just the usernames for the API call
+            const usernames = usersList.map(user => user.username).filter(username => username && username.trim());
+
+            if (usernames.length === 0) {
+                throw new Error('No valid usernames found in share list');
+            }
+
+            console.log('Sharing note:', { noteId, usernames, usersList });
+
+            // Use the new batch sharing API
+            await apiClient.shareNoteWithUsers(noteId, usernames, 'read');
+
             showToast(`Note shared with ${usersList.length} user(s) (read-only access)`, TOAST_TYPES.SUCCESS);
         } catch (error) {
-            console.error('Failed to share with some users:', error);
-            showToast('Note saved, but sharing failed for some users. They may not exist in the system.', TOAST_TYPES.WARNING);
+            console.error('Failed to share with users:', error);
+            console.error('Share data:', { noteId, usersList });
+            showToast('Note saved, but sharing failed: ' + error.message, TOAST_TYPES.WARNING);
         }
     }
 
@@ -599,8 +619,12 @@ class NotesManager {
             }
 
             // Handle sharing if users were selected
+            console.log('Share list after saving note:', this.shareList);
             if (this.shareList.length > 0 && savedNote?.id) {
+                console.log('Attempting to share note:', { noteId: savedNote.id, shareList: this.shareList });
                 await this.shareNoteWithUsers(savedNote.id, this.shareList);
+            } else {
+                console.log('No sharing needed:', { shareListLength: this.shareList.length, noteId: savedNote?.id });
             }
 
             this.showDashboard();
@@ -614,13 +638,24 @@ class NotesManager {
 
     // Handle note deletion
     async handleNoteDelete() {
-        if (!this.currentNote) return;
+        if (!this.currentNote) {
+            console.error('No current note to delete');
+            showToast('No note selected for deletion', TOAST_TYPES.ERROR);
+            return;
+        }
+
+        if (!this.currentNote.id) {
+            console.error('Current note has no ID:', this.currentNote);
+            showToast('Invalid note ID for deletion', TOAST_TYPES.ERROR);
+            return;
+        }
 
         if (!confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
             return;
         }
 
         try {
+            console.log('Deleting note:', { noteId: this.currentNote.id, noteTitle: this.currentNote.title });
             await apiClient.deleteNote(this.currentNote.id);
             showToast('Note deleted successfully', TOAST_TYPES.SUCCESS);
             this.showDashboard();
@@ -628,7 +663,19 @@ class NotesManager {
 
         } catch (error) {
             console.error('Failed to delete note:', error);
-            showToast(error.message || 'Failed to delete note', TOAST_TYPES.ERROR);
+            console.error('Note data:', this.currentNote);
+
+            // Handle specific backend errors
+            if (error.message && error.message.includes('StaleDataError')) {
+                showToast('Note deletion failed due to concurrent modifications. Please refresh and try again.', TOAST_TYPES.WARNING);
+                // Refresh the current view to show updated data
+                this.showDashboard();
+                this.loadNotes(1, this.currentFilters);
+            } else if (error.message && error.message.includes('500')) {
+                showToast('Server error occurred while deleting note. Please try again later.', TOAST_TYPES.ERROR);
+            } else {
+                showToast(error.message || 'Failed to delete note', TOAST_TYPES.ERROR);
+            }
         }
     }
 

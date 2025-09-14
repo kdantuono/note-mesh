@@ -96,18 +96,60 @@ class ApiClient {
 
     // Handle API response
     async handleResponse(response) {
+        // For successful responses with no content (like 204 No Content), return null
+        if (response.ok && (response.status === 204 || response.status === 205)) {
+            return null;
+        }
+
         const contentType = response.headers.get('content-type');
         const isJson = contentType && contentType.includes('application/json');
 
         let data = null;
-        if (isJson) {
-            data = await response.json();
+
+        // Check if there's actually content to read
+        const contentLength = response.headers.get('content-length');
+        if (contentLength === '0') {
+            data = null;
         } else {
-            data = await response.text();
+            try {
+                if (isJson) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    data = text || null;
+                }
+            } catch (parseError) {
+                console.warn('Failed to parse response:', parseError);
+                data = null;
+            }
         }
 
         if (!response.ok) {
-            const errorMessage = data?.detail || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+            if (data) {
+                if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data.detail) {
+                    if (typeof data.detail === 'string') {
+                        errorMessage = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        // Handle Pydantic validation errors
+                        const validationErrors = data.detail.map(err => {
+                            const location = err.loc ? err.loc.join('.') : 'unknown';
+                            return `${location}: ${err.msg}`;
+                        }).join(', ');
+                        errorMessage = `Validation errors: ${validationErrors}`;
+                    } else {
+                        errorMessage = JSON.stringify(data.detail);
+                    }
+                } else if (data.message) {
+                    errorMessage = data.message;
+                } else {
+                    errorMessage = JSON.stringify(data);
+                }
+            }
+
             throw new Error(errorMessage);
         }
 
@@ -209,6 +251,12 @@ class ApiClient {
     }
 
     async deleteNote(noteId) {
+        if (!noteId) {
+            throw new Error('Note ID is required for deletion');
+        }
+
+        console.log('Deleting note via API:', { noteId, endpoint: ENDPOINTS.NOTE_BY_ID(noteId) });
+
         return await this.makeRequest(ENDPOINTS.NOTE_BY_ID(noteId), {
             method: 'DELETE'
         });
@@ -241,13 +289,50 @@ class ApiClient {
 
     // Sharing API calls
     async shareNote(noteId, username, permission = 'read') {
+        const payload = {
+            note_id: noteId,
+            shared_with_usernames: [username], // Backend expects array
+            permission_level: permission // FIXED: was 'permission', should be 'permission_level'
+        };
+
+        console.log('Sharing payload (single user):', payload);
+
         return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
             method: 'POST',
-            body: JSON.stringify({
-                note_id: noteId,
-                shared_with_username: username,
-                permission: permission
-            })
+            body: JSON.stringify(payload)
+        });
+    }
+
+    // Share note with multiple users in a single API call (more efficient)
+    async shareNoteWithUsers(noteId, usernames, permission = 'read') {
+        // Validate inputs
+        if (!noteId) {
+            throw new Error('Note ID is required');
+        }
+
+        if (!usernames || !Array.isArray(usernames) || usernames.length === 0) {
+            throw new Error('At least one username is required');
+        }
+
+        if (usernames.length > 20) {
+            throw new Error('Cannot share with more than 20 users at once');
+        }
+
+        if (!['read', 'write'].includes(permission)) {
+            throw new Error('Permission level must be "read" or "write"');
+        }
+
+        const payload = {
+            note_id: noteId,
+            shared_with_usernames: usernames, // Array of usernames
+            permission_level: permission
+        };
+
+        console.log('Sharing payload (multiple users):', payload);
+
+        return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
     }
 

@@ -993,6 +993,17 @@ body {
     }
 }
 
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.02);
+        opacity: 0.9;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-toggle {

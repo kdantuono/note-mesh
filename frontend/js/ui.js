@@ -34,11 +34,19 @@ function showToast(message, type = TOAST_TYPES.INFO, duration = CONFIG.TOAST_DUR
             break;
     }
 
+    // Determine if toast should be persistent (for errors and warnings)
+    const isPersistent = type === TOAST_TYPES.ERROR || type === TOAST_TYPES.WARNING;
+
     toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
             ${icon}
-            <span>${escapeHtml(message)}</span>
-            <button onclick="this.parentElement.parentElement.remove()" style="margin-left: auto; background: none; border: none; cursor: pointer; opacity: 0.7;">
+            <div style="flex: 1;">
+                <span>${escapeHtml(message)}</span>
+                ${isPersistent ? '<div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.25rem;">Click × to dismiss</div>' : ''}
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()"
+                    style="margin-left: auto; background: none; border: none; cursor: pointer; opacity: 0.7; padding: 0.25rem;"
+                    title="${isPersistent ? 'Click to dismiss' : 'Close'}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -46,13 +54,18 @@ function showToast(message, type = TOAST_TYPES.INFO, duration = CONFIG.TOAST_DUR
 
     container.appendChild(toast);
 
-    // Auto-remove after duration
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
-            setTimeout(() => toast.remove(), 300);
-        }
-    }, duration);
+    // Auto-remove after duration (only for success and info toasts)
+    if (!isPersistent) {
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    } else {
+        // For persistent toasts, add a subtle pulse animation to draw attention
+        toast.style.animation = 'slideInRight 0.3s ease-out, pulse 2s ease-in-out 1s';
+    }
 }
 
 // Sharing management
