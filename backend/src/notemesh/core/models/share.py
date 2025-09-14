@@ -1,22 +1,23 @@
 # Note sharing between users
 import uuid
-from typing import Optional, TYPE_CHECKING
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import String, DateTime, Index, ForeignKey, UniqueConstraint, CheckConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
 from .types import GUID
 
 if TYPE_CHECKING:
-    from .user import User
     from .note import Note
+    from .user import User
 
 
 class ShareStatus(str, Enum):
     """Share status options."""
+
     ACTIVE = "active"
     EXPIRED = "expired"
     REVOKED = "revoked"
@@ -39,9 +40,7 @@ class Share(BaseModel):
     )
 
     # Permission level for this share (read/write)
-    permission: Mapped[str] = mapped_column(
-        String(20), default="read", nullable=False
-    )
+    permission: Mapped[str] = mapped_column(String(20), default="read", nullable=False)
 
     status: Mapped[ShareStatus] = mapped_column(
         String(20), default=ShareStatus.ACTIVE, nullable=False
@@ -51,7 +50,9 @@ class Share(BaseModel):
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_accessed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_accessed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     access_count: Mapped[int] = mapped_column(default=0, nullable=False)
     share_message: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
@@ -74,7 +75,9 @@ class Share(BaseModel):
         # Enforce length constraints
         CheckConstraint("length(permission) <= 20", name="ck_shares_permission_len"),
         CheckConstraint("length(status) <= 20", name="ck_shares_status_len"),
-        CheckConstraint("share_message IS NULL OR length(share_message) <= 500", name="ck_shares_message_len"),
+        CheckConstraint(
+            "share_message IS NULL OR length(share_message) <= 500", name="ck_shares_message_len"
+        ),
         Index("idx_shares_note_id", "note_id"),
         Index("idx_shares_shared_by", "shared_by_user_id"),
         Index("idx_shares_shared_with", "shared_with_user_id"),
@@ -110,7 +113,8 @@ class Share(BaseModel):
     def check_permission(self, user_id: uuid.UUID) -> dict[str, bool]:
         """Check what user can do with this share."""
         return {
-            "can_read": (user_id == self.shared_with_user_id and self.is_active) or user_id == self.shared_by_user_id,
+            "can_read": (user_id == self.shared_with_user_id and self.is_active)
+            or user_id == self.shared_by_user_id,
             "can_edit": user_id == self.shared_by_user_id,  # only owner edits
             "is_owner": user_id == self.shared_by_user_id,
             "is_recipient": user_id == self.shared_with_user_id,

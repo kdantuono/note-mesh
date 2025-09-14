@@ -18,7 +18,9 @@ def build_app(depends_current_user: bool = False) -> FastAPI:
         return {"user_id": str(user_id)}
 
     @app.get("/me")
-    async def me(user_id=Depends(get_current_user_id) if depends_current_user else Depends(JWTBearer())):
+    async def me(
+        user_id=Depends(get_current_user_id) if depends_current_user else Depends(JWTBearer()),
+    ):
         return {"user_id": str(user_id)}
 
     return app
@@ -32,6 +34,7 @@ def test_jwtbearer_accepts_valid_token(monkeypatch):
     # Monkeypatch token decoder to return a fixed user id
     uid = uuid.uuid4()
     from src.notemesh.middleware import auth as auth_module
+
     monkeypatch.setattr(auth_module, "get_user_id_from_token", lambda t: uid)
 
     app = build_app()
@@ -57,6 +60,7 @@ def test_jwtbearer_rejects_wrong_scheme():
 
 def test_jwtbearer_rejects_invalid_token(monkeypatch):
     from src.notemesh import security as security_pkg
+
     monkeypatch.setattr(security_pkg, "get_user_id_from_token", lambda t: None)
 
     app = build_app()
@@ -68,6 +72,7 @@ def test_jwtbearer_rejects_invalid_token(monkeypatch):
 def test_get_current_user_id_dependency(monkeypatch):
     uid = uuid.uuid4()
     from src.notemesh.middleware import auth as auth_module
+
     monkeypatch.setattr(auth_module, "get_user_id_from_token", lambda t: uid)
 
     app = build_app(depends_current_user=True)

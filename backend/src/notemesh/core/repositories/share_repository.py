@@ -3,12 +3,12 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, and_, func, desc
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..models.share import Share
 from ..models.note import Note
+from ..models.share import Share
 
 
 class ShareRepository:
@@ -27,22 +27,28 @@ class ShareRepository:
 
     async def get_by_id(self, share_id: UUID) -> Optional[Share]:
         """Get share by ID."""
-        stmt = select(Share).options(
-            selectinload(Share.note),
-            selectinload(Share.shared_by_user),
-            selectinload(Share.shared_with_user)
-        ).where(Share.id == share_id)
+        stmt = (
+            select(Share)
+            .options(
+                selectinload(Share.note),
+                selectinload(Share.shared_by_user),
+                selectinload(Share.shared_with_user),
+            )
+            .where(Share.id == share_id)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_user_share(self, share_id: UUID, user_id: UUID) -> Optional[Share]:
         """Get share if user is owner."""
-        stmt = select(Share).options(
-            selectinload(Share.note),
-            selectinload(Share.shared_by_user),
-            selectinload(Share.shared_with_user)
-        ).where(
-            and_(Share.id == share_id, Share.shared_by_user_id == user_id)
+        stmt = (
+            select(Share)
+            .options(
+                selectinload(Share.note),
+                selectinload(Share.shared_by_user),
+                selectinload(Share.shared_with_user),
+            )
+            .where(and_(Share.id == share_id, Share.shared_by_user_id == user_id))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -58,10 +64,7 @@ class ShareRepository:
         return True
 
     async def list_shares_given(
-        self,
-        user_id: UUID,
-        page: int = 1,
-        per_page: int = 20
+        self, user_id: UUID, page: int = 1, per_page: int = 20
     ) -> tuple[List[Share], int]:
         """List shares created by user."""
         offset = (page - 1) * per_page
@@ -72,12 +75,14 @@ class ShareRepository:
         total_count = total_result.scalar()
 
         # Data query
-        stmt = select(Share).options(
-            selectinload(Share.note),
-            selectinload(Share.shared_with_user)
-        ).where(
-            Share.shared_by_user_id == user_id
-        ).order_by(desc(Share.created_at)).offset(offset).limit(per_page)
+        stmt = (
+            select(Share)
+            .options(selectinload(Share.note), selectinload(Share.shared_with_user))
+            .where(Share.shared_by_user_id == user_id)
+            .order_by(desc(Share.created_at))
+            .offset(offset)
+            .limit(per_page)
+        )
 
         result = await self.session.execute(stmt)
         shares = list(result.scalars())
@@ -85,10 +90,7 @@ class ShareRepository:
         return shares, total_count
 
     async def list_shares_received(
-        self,
-        user_id: UUID,
-        page: int = 1,
-        per_page: int = 20
+        self, user_id: UUID, page: int = 1, per_page: int = 20
     ) -> tuple[List[Share], int]:
         """List shares received by user."""
         offset = (page - 1) * per_page
@@ -99,12 +101,14 @@ class ShareRepository:
         total_count = total_result.scalar()
 
         # Data query
-        stmt = select(Share).options(
-            selectinload(Share.note),
-            selectinload(Share.shared_by_user)
-        ).where(
-            Share.shared_with_user_id == user_id
-        ).order_by(desc(Share.created_at)).offset(offset).limit(per_page)
+        stmt = (
+            select(Share)
+            .options(selectinload(Share.note), selectinload(Share.shared_by_user))
+            .where(Share.shared_with_user_id == user_id)
+            .order_by(desc(Share.created_at))
+            .offset(offset)
+            .limit(per_page)
+        )
 
         result = await self.session.execute(stmt)
         shares = list(result.scalars())
@@ -129,7 +133,7 @@ class ShareRepository:
             "can_read": is_owner or shared_note is not None,
             "can_write": is_owner or (shared_note and shared_note.permission_level == "write"),
             "can_share": is_owner,
-            "is_owner": is_owner
+            "is_owner": is_owner,
         }
 
     async def get_share_stats(self, user_id: UUID) -> dict:
@@ -154,5 +158,5 @@ class ShareRepository:
         return {
             "shares_given": shares_given,
             "shares_received": shares_received,
-            "unique_notes_shared": unique_notes_shared
+            "unique_notes_shared": unique_notes_shared,
         }

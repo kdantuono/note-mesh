@@ -34,13 +34,14 @@ def test_register_calls_service(monkeypatch, client):
         }
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "register_user", fake_register_user, raising=True)
 
     payload = {
         "username": "alice",
         "password": "Password123!",
         "confirm_password": "Password123!",
-        "full_name": "Alice A"
+        "full_name": "Alice A",
     }
     resp = client.post("/api/auth/register", json=payload)
     data = _json_ok(resp)
@@ -65,6 +66,7 @@ def test_login_calls_service(monkeypatch, client):
         }
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "authenticate_user", fake_auth, raising=True)
 
     resp = client.post("/api/auth/login", json={"username": "bob", "password": "Password123!"})
@@ -90,6 +92,7 @@ def test_refresh_calls_service(monkeypatch, client):
         }
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "refresh_token", fake_refresh, raising=True)
 
     resp = client.post("/api/auth/refresh", json={"refresh_token": "rt"})
@@ -113,15 +116,18 @@ def test_me_calls_service(monkeypatch, client):
 
     # Override dependency to inject a fixed user id
     # Use FastAPI dependency_overrides to bypass auth and return our fixed user_id
-    from src.notemesh.main import app
     from src.notemesh.api.auth import get_current_user_id as real_dep
+    from src.notemesh.main import app
+
     app.dependency_overrides[real_dep] = lambda: str(user_id)
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "get_current_user", fake_get_current_user, raising=True)
 
     resp = client.get("/api/auth/me")
     from src.notemesh.main import app
+
     # cleanup override
     app.dependency_overrides.pop(real_dep, None)
     data = _json_ok(resp)
@@ -142,11 +148,13 @@ def test_update_profile_calls_service(monkeypatch, client):
             "updated_at": "2025-01-01T00:00:00Z",
         }
 
-    from src.notemesh.main import app
     from src.notemesh.api.auth import get_current_user_id as real_dep
+    from src.notemesh.main import app
+
     app.dependency_overrides[real_dep] = lambda: str(user_id)
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "update_user_profile", fake_update, raising=True)
 
     resp = client.put("/api/auth/me", json={"username": "alice"})
@@ -163,11 +171,13 @@ def test_change_password_calls_service(monkeypatch, client):
         assert str(uid) == str(user_id)
         return True
 
-    from src.notemesh.main import app
     from src.notemesh.api.auth import get_current_user_id as real_dep
+    from src.notemesh.main import app
+
     app.dependency_overrides[real_dep] = lambda: str(user_id)
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "change_password", fake_change, raising=True)
 
     payload = {
@@ -189,11 +199,13 @@ def test_logout_calls_service(monkeypatch, client):
         assert str(uid) == str(user_id)
         return True
 
-    from src.notemesh.main import app
     from src.notemesh.api.auth import get_current_user_id as real_dep
+    from src.notemesh.main import app
+
     app.dependency_overrides[real_dep] = lambda: str(user_id)
 
     from src.notemesh.core.services.auth_service import AuthService
+
     monkeypatch.setattr(AuthService, "logout_user", fake_logout, raising=True)
 
     resp = client.post("/api/auth/logout")

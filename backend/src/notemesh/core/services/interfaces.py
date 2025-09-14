@@ -3,22 +3,35 @@ Service interfaces for NoteMesh application.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from ..schemas.auth import (
-    LoginRequest, TokenResponse, RegisterRequest, UserResponse,
-    RefreshTokenRequest, PasswordChangeRequest, UserUpdateRequest
-)
-from ..schemas.notes import (
-    NoteCreate, NoteUpdate, NoteResponse, NoteListResponse,
-    NoteSearchRequest, NoteSearchResponse
-)
-from ..schemas.sharing import (
-    ShareRequest, ShareResponse, SharedNoteResponse,
-    ShareListRequest, ShareListResponse, ShareStatsResponse
+    LoginRequest,
+    PasswordChangeRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
+    UserUpdateRequest,
 )
 from ..schemas.common import HealthCheckResponse
+from ..schemas.notes import (
+    NoteCreate,
+    NoteListResponse,
+    NoteResponse,
+    NoteSearchRequest,
+    NoteSearchResponse,
+    NoteUpdate,
+)
+from ..schemas.sharing import (
+    SharedNoteResponse,
+    ShareListRequest,
+    ShareListResponse,
+    ShareRequest,
+    ShareResponse,
+    ShareStatsResponse,
+)
 
 
 class IAuthService(ABC):
@@ -89,7 +102,7 @@ class INoteService(ABC):
         user_id: UUID,
         page: int = 1,
         per_page: int = 20,
-        tag_filter: Optional[List[str]] = None
+        tag_filter: Optional[List[str]] = None,
     ) -> NoteListResponse:
         """List user notes with pagination."""
         pass

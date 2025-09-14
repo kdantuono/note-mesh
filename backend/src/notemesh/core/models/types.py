@@ -1,9 +1,10 @@
 """Custom SQLAlchemy types for NoteMesh models with cross-DB support."""
 
-from typing import List, Optional
-import uuid
-from sqlalchemy import TypeDecorator, String, Text
 import json
+import uuid
+from typing import List, Optional
+
+from sqlalchemy import String, Text, TypeDecorator
 
 
 class HttpUrlListType(TypeDecorator):
@@ -22,8 +23,9 @@ class HttpUrlListType(TypeDecorator):
     def load_dialect_impl(self, dialect):
         # Choose storage strategy based on dialect
         if dialect.name == "postgresql":
-            from sqlalchemy.dialects.postgresql import ARRAY
             from sqlalchemy import String as SAString
+            from sqlalchemy.dialects.postgresql import ARRAY
+
             return dialect.type_descriptor(ARRAY(SAString(500)))
         # Fallback (e.g., sqlite): JSON as TEXT
         return dialect.type_descriptor(Text())
@@ -66,6 +68,7 @@ class GUID(TypeDecorator):
     def load_dialect_impl(self, dialect):
         if dialect.name == "postgresql":
             from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
             return dialect.type_descriptor(PG_UUID(as_uuid=True))
         return dialect.type_descriptor(String(36))
 

@@ -1,14 +1,14 @@
 # Main application entry point
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import create_tables
-from .api import auth_router, notes_router, search_router, sharing_router, health_router
+from .api import auth_router, health_router, notes_router, search_router, sharing_router
 from .config import get_settings
-from .core.logging import setup_logging, LoggingMiddleware, get_logger
+from .core.logging import LoggingMiddleware, get_logger, setup_logging
+from .database import create_tables
 
 # Setup logging first
 setup_logging()
@@ -21,14 +21,14 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    logger.info("Starting NoteMesh application", extra={
-        'version': '0.1.0',
-        'environment': settings.environment,
-        'debug': settings.debug
-    })
+    logger.info(
+        "Starting NoteMesh application",
+        extra={"version": "0.1.0", "environment": settings.environment, "debug": settings.debug},
+    )
 
     # Allow tests to skip touching the real DB (e.g., when using SQLite in-memory)
     import os
+
     if os.getenv("NOTEMESH_SKIP_LIFESPAN_DB") == "1":
         logger.info("Skipping DB table creation due to NOTEMESH_SKIP_LIFESPAN_DB=1")
     else:
@@ -49,7 +49,7 @@ app = FastAPI(
     title="NoteMesh",
     description="Note sharing and management API",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add logging middleware
@@ -71,6 +71,7 @@ app.include_router(search_router, prefix="/api")
 app.include_router(sharing_router, prefix="/api")
 app.include_router(health_router, prefix="/api")
 
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -85,9 +86,5 @@ async def basic_health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "notemesh.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+
+    uvicorn.run("notemesh.main:app", host="0.0.0.0", port=8000, reload=True)

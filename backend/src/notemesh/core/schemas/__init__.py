@@ -6,38 +6,35 @@ define input/output contracts for authentication, notes, sharing, and
 common responses (pagination and error formats).
 """
 
-from .auth import LoginRequest, TokenResponse, RegisterRequest, UserResponse
+from .auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from .common import ErrorResponse, PaginationResponse
 from .notes import (
     NoteCreate,
-    NoteUpdate, 
-    NoteResponse,
     NoteListResponse,
+    NoteResponse,
     NoteSearchRequest,
-    NoteSearchResponse
+    NoteSearchResponse,
+    NoteUpdate,
 )
-from .sharing import ShareRequest, ShareResponse, SharedNoteResponse
-from .common import PaginationResponse, ErrorResponse
+from .sharing import SharedNoteResponse, ShareRequest, ShareResponse
 
 __all__ = [
     # Auth schemas
     "LoginRequest",
-    "TokenResponse", 
+    "TokenResponse",
     "RegisterRequest",
     "UserResponse",
-    
     # Note schemas
     "NoteCreate",
     "NoteUpdate",
-    "NoteResponse", 
+    "NoteResponse",
     "NoteListResponse",
     "NoteSearchRequest",
     "NoteSearchResponse",
-    
     # Sharing schemas
     "ShareRequest",
     "ShareResponse",
     "SharedNoteResponse",
-    
     # Common schemas
     "PaginationResponse",
     "ErrorResponse",

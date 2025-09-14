@@ -1,6 +1,7 @@
 """Unit tests for NoteRepository without DB."""
 
 import uuid
+
 import pytest
 
 from src.notemesh.core.repositories.note_repository import NoteRepository
@@ -26,10 +27,13 @@ class FakeScalarResult:
         class _It:
             def __init__(self, data):
                 self._data = data
+
             def all(self):
                 return self._data
+
             def __iter__(self):
                 return iter(self._data)
+
         return _It(self._scalars_list)
 
 
@@ -62,12 +66,30 @@ class FakeSession:
 async def test_create_get_update_delete_note_flow():
     owner = uuid.uuid4()
     note_id = uuid.uuid4()
-    dummy_note = Dummy(id=note_id, owner_id=owner, title="t", content="c", tags=[], updated_at=None, created_at=None, hyperlinks=None)
+    dummy_note = Dummy(
+        id=note_id,
+        owner_id=owner,
+        title="t",
+        content="c",
+        tags=[],
+        updated_at=None,
+        created_at=None,
+        hyperlinks=None,
+    )
 
     # create -> commit+refresh, then get_by_id returns our dummy
     session = FakeSession(results_iter=[FakeScalarResult(dummy_note)])
     repo = NoteRepository(session)
-    created = await repo.create_note({"id": note_id, "owner_id": owner, "title": "t", "content": "c", "is_public": False, "hyperlinks": []})
+    created = await repo.create_note(
+        {
+            "id": note_id,
+            "owner_id": owner,
+            "title": "t",
+            "content": "c",
+            "is_public": False,
+            "hyperlinks": [],
+        }
+    )
     assert session.added and session.commits == 1 and session.refreshed
 
     got = await repo.get_by_id(note_id)
@@ -75,7 +97,9 @@ async def test_create_get_update_delete_note_flow():
 
     # get_by_id_and_user ok and then update_note returns same dummy after commit/refresh
     # One result for explicit get_by_id_and_user call, another for update_note's internal fetch
-    session2 = FakeSession(results_iter=[FakeScalarResult(dummy_note), FakeScalarResult(dummy_note)])
+    session2 = FakeSession(
+        results_iter=[FakeScalarResult(dummy_note), FakeScalarResult(dummy_note)]
+    )
     repo2 = NoteRepository(session2)
     ok = await repo2.get_by_id_and_user(note_id, owner)
     assert ok is dummy_note
@@ -98,10 +122,28 @@ async def test_create_get_update_delete_note_flow():
 @pytest.mark.asyncio
 async def test_list_user_notes_and_tags_and_search():
     owner = uuid.uuid4()
-    n1 = Dummy(id=uuid.uuid4(), owner_id=owner, title="a", content="x", tags=[], updated_at=1, created_at=None)
-    n2 = Dummy(id=uuid.uuid4(), owner_id=owner, title="b", content="y", tags=[], updated_at=2, created_at=None)
+    n1 = Dummy(
+        id=uuid.uuid4(),
+        owner_id=owner,
+        title="a",
+        content="x",
+        tags=[],
+        updated_at=1,
+        created_at=None,
+    )
+    n2 = Dummy(
+        id=uuid.uuid4(),
+        owner_id=owner,
+        title="b",
+        content="y",
+        tags=[],
+        updated_at=2,
+        created_at=None,
+    )
     # list_user_notes expects two executes: count then data
-    session = FakeSession(results_iter=[FakeScalarResult(2), FakeScalarResult(scalars_list=[n1, n2])])
+    session = FakeSession(
+        results_iter=[FakeScalarResult(2), FakeScalarResult(scalars_list=[n1, n2])]
+    )
     repo = NoteRepository(session)
     notes, total = await repo.list_user_notes(owner, page=1, per_page=20, tag_filter=None)
     assert total == 2 and len(notes) == 2

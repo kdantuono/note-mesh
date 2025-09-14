@@ -6,12 +6,16 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..database import get_db_session
-from ..core.services import SharingService
 from ..core.schemas.sharing import (
-    ShareRequest, ShareResponse, SharedNoteResponse,
-    ShareListRequest, ShareListResponse, ShareStatsResponse
+    SharedNoteResponse,
+    ShareListRequest,
+    ShareListResponse,
+    ShareRequest,
+    ShareResponse,
+    ShareStatsResponse,
 )
+from ..core.services import SharingService
+from ..database import get_db_session
 from ..middleware.auth import get_current_user_id
 
 router = APIRouter(prefix="/sharing", tags=["sharing"])
@@ -21,7 +25,7 @@ router = APIRouter(prefix="/sharing", tags=["sharing"])
 async def share_note(
     request: ShareRequest,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Share a note with other users."""
     sharing_service = SharingService(session)
@@ -32,7 +36,7 @@ async def share_note(
 async def revoke_share(
     share_id: UUID,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Revoke a note share."""
     sharing_service = SharingService(session)
@@ -43,7 +47,7 @@ async def revoke_share(
 async def get_shared_note(
     note_id: UUID,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Get a shared note (for recipients)."""
     sharing_service = SharingService(session)
@@ -56,22 +60,18 @@ async def list_shares(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """List shares (given or received)."""
     sharing_service = SharingService(session)
-    request = ShareListRequest(
-        type=type,
-        page=page,
-        per_page=per_page
-    )
+    request = ShareListRequest(type=type, page=page, per_page=per_page)
     return await sharing_service.list_shares(current_user_id, request)
 
 
 @router.get("/stats", response_model=ShareStatsResponse)
 async def get_share_stats(
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Get sharing statistics."""
     sharing_service = SharingService(session)
@@ -82,7 +82,7 @@ async def get_share_stats(
 async def check_note_access(
     note_id: UUID,
     current_user_id: UUID = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_db_session)
+    session: AsyncSession = Depends(get_db_session),
 ):
     """Check access permissions for a note."""
     sharing_service = SharingService(session)

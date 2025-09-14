@@ -7,15 +7,20 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .interfaces import IAuthService
-from ..repositories.user_repository import UserRepository
-from ..repositories.refresh_token_repository import RefreshTokenRepository
-from ..schemas.auth import (
-    LoginRequest, TokenResponse, RegisterRequest, UserResponse,
-    RefreshTokenRequest, PasswordChangeRequest, UserUpdateRequest
-)
-from ...security import hash_password, verify_password, create_access_token, create_refresh_token
 from ...config import get_settings
+from ...security import create_access_token, create_refresh_token, hash_password, verify_password
+from ..repositories.refresh_token_repository import RefreshTokenRepository
+from ..repositories.user_repository import UserRepository
+from ..schemas.auth import (
+    LoginRequest,
+    PasswordChangeRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
+    UserUpdateRequest,
+)
+from .interfaces import IAuthService
 
 
 class AuthService(IAuthService):
@@ -32,8 +37,7 @@ class AuthService(IAuthService):
         # Check if username already exists
         if await self.user_repo.is_username_taken(request.username):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
             )
 
         # Hash password
@@ -45,7 +49,7 @@ class AuthService(IAuthService):
             "password_hash": hashed_password,
             "full_name": request.full_name,
             "is_active": True,
-            "is_verified": True
+            "is_verified": True,
         }
 
         user = await self.user_repo.create_user(user_data)
@@ -56,7 +60,7 @@ class AuthService(IAuthService):
             full_name=user.full_name,
             is_active=user.is_active,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
         )
 
     async def authenticate_user(self, request: LoginRequest) -> TokenResponse:
@@ -65,15 +69,13 @@ class AuthService(IAuthService):
         user = await self.user_repo.get_by_username(request.username)
         if not user or not user.can_login():
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
         # Verify password
         if not verify_password(request.password, user.password_hash):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
             )
 
         # Create tokens
@@ -84,7 +86,8 @@ class AuthService(IAuthService):
         token_data = {
             "token": refresh_token,
             "user_id": user.id,
-            "expires_at": datetime.now(timezone.utc) + timedelta(days=self.settings.refresh_token_expire_days)
+            "expires_at": datetime.now(timezone.utc)
+            + timedelta(days=self.settings.refresh_token_expire_days),
         }
         await self.token_repo.create_token(token_data)
 
@@ -95,7 +98,7 @@ class AuthService(IAuthService):
             full_name=user.full_name,
             is_active=user.is_active,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
         )
 
         return TokenResponse(
@@ -103,7 +106,7 @@ class AuthService(IAuthService):
             refresh_token=refresh_token,
             token_type="bearer",
             expires_in=self.settings.access_token_expire_minutes * 60,
-            user=user_response
+            user=user_response,
         )
 
     async def refresh_token(self, request: RefreshTokenRequest) -> TokenResponse:
@@ -111,23 +114,20 @@ class AuthService(IAuthService):
         # Validate refresh token
         if not await self.token_repo.is_token_valid(request.refresh_token):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
 
         # Get token and user
         token_obj = await self.token_repo.get_by_token(request.refresh_token)
         if not token_obj:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
 
         user = await self.user_repo.get_by_id(token_obj.user_id)
         if not user or not user.can_login():
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User account inactive"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="User account inactive"
             )
 
         # Create new access token
@@ -141,7 +141,8 @@ class AuthService(IAuthService):
         token_data = {
             "token": new_refresh_token,
             "user_id": user.id,
-            "expires_at": datetime.now(timezone.utc) + timedelta(days=self.settings.refresh_token_expire_days)
+            "expires_at": datetime.now(timezone.utc)
+            + timedelta(days=self.settings.refresh_token_expire_days),
         }
         await self.token_repo.create_token(token_data)
 
@@ -152,7 +153,7 @@ class AuthService(IAuthService):
             full_name=user.full_name,
             is_active=user.is_active,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
         )
 
         return TokenResponse(
@@ -160,17 +161,14 @@ class AuthService(IAuthService):
             refresh_token=new_refresh_token,
             token_type="bearer",
             expires_in=self.settings.access_token_expire_minutes * 60,
-            user=user_response
+            user=user_response,
         )
 
     async def get_current_user(self, user_id: UUID) -> UserResponse:
         """Get user by ID."""
         user = await self.user_repo.get_by_id(user_id)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         return UserResponse(
             id=user.id,
@@ -178,24 +176,20 @@ class AuthService(IAuthService):
             full_name=user.full_name,
             is_active=user.is_active,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
         )
 
     async def update_user_profile(self, user_id: UUID, request: UserUpdateRequest) -> UserResponse:
         """Update user profile."""
         user = await self.user_repo.get_by_id(user_id)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         # Check if new username is available (if changing)
         if request.username and request.username != user.username:
             if await self.user_repo.is_username_taken(request.username):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Username already taken"
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
                 )
 
         # Update user data
@@ -214,23 +208,19 @@ class AuthService(IAuthService):
             full_name=user.full_name,
             is_active=user.is_active,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
         )
 
     async def change_password(self, user_id: UUID, request: PasswordChangeRequest) -> bool:
         """Change user password."""
         user = await self.user_repo.get_by_id(user_id)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         # Verify current password
         if not verify_password(request.current_password, user.password_hash):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect"
             )
 
         # Hash new password

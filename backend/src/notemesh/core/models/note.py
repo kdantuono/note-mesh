@@ -1,19 +1,21 @@
 """Note model for user content."""
 import uuid
-from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String, Text, Integer, Index, ForeignKey, CheckConstraint, event
-from sqlalchemy.orm import Mapped, mapped_column, relationship, attributes as orm_attributes, validates
 from pydantic import HttpUrl
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, event
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import attributes as orm_attributes
+from sqlalchemy.orm import mapped_column, relationship, validates
 
 from .base import BaseModel
-from .types import HttpUrlListType, GUID
+from .types import GUID, HttpUrlListType
 
 if TYPE_CHECKING:
-    from .user import User
-    from .tag import Tag, NoteTag
     from .share import Share
+    from .tag import NoteTag, Tag
+    from .user import User
 
 
 class Note(BaseModel):
@@ -26,9 +28,7 @@ class Note(BaseModel):
     is_public: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Store as list of URLs; on SQLite it's JSON TEXT via HttpUrlListType
-    hyperlinks: Mapped[Optional[List[HttpUrl]]] = mapped_column(
-        HttpUrlListType, nullable=True
-    )
+    hyperlinks: Mapped[Optional[List[HttpUrl]]] = mapped_column(HttpUrlListType, nullable=True)
 
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_viewed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
@@ -81,14 +81,12 @@ class Note(BaseModel):
         # Full-text search indexes (basic btree on SQLite)
         Index("idx_notes_title_fts", "title"),
         Index("idx_notes_content_fts", "content"),
-
         # Query optimization indexes
         Index("idx_notes_owner_id", "owner_id"),
         Index("idx_notes_created_at", "created_at"),
         Index("idx_notes_view_count", "view_count"),
         Index("idx_notes_owner_created", "owner_id", "created_at"),
         Index("idx_notes_owner_view_count", "owner_id", "view_count"),
-
         # Enforce title max length (SQLite compatible)
         CheckConstraint("length(title) <= 200", name="ck_notes_title_len"),
     )
@@ -128,7 +126,7 @@ class Note(BaseModel):
         """Extract potential hyperlinks from note content using regex."""
         import re
 
-        url_pattern = r'https?://[^\s<>":'"'"'`|(){}[\]]*'
+        url_pattern = r'https?://[^\s<>":' "'" "`|(){}[\]]*"
         urls = re.findall(url_pattern, self.content, re.IGNORECASE)
         return list(set(urls))
 

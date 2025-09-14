@@ -1,29 +1,28 @@
 """Shared pytest fixtures configured to use SQLite in-memory for unit tests."""
 
 import asyncio
+import logging
 import os
 from uuid import uuid4
-import logging
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy import event, select
-from sqlalchemy.orm import sessionmaker, selectinload
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import attributes as orm_attributes
+from sqlalchemy.orm import selectinload, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.notemesh.main import app
-from src.notemesh.database import get_db_session
-from src.notemesh.core.models.base import BaseModel
 from src.notemesh.config import Settings, get_settings
-from src.notemesh.security.password import hash_password
+from src.notemesh.core.models.base import BaseModel
+from src.notemesh.database import get_db_session
+from src.notemesh.main import app
 from src.notemesh.security.jwt import create_access_token
+from src.notemesh.security.password import hash_password
 
 # Silence extremely verbose DEBUG logs from aiosqlite to keep test output readable
 logging.getLogger("aiosqlite").setLevel(logging.WARNING)
-
 
 
 @pytest.fixture(scope="session")
@@ -69,13 +68,12 @@ async def test_engine(test_settings):
 
     # Create tables once per session (we'll drop/create per test session fixture)
     async with engine.begin() as conn:
-        from src.notemesh.core.models import (
-            user as _m_user,
-            note as _m_note,
-            tag as _m_tag,
-            share as _m_share,
-            refresh_token as _m_refresh_token,
-        )
+        from src.notemesh.core.models import note as _m_note
+        from src.notemesh.core.models import refresh_token as _m_refresh_token
+        from src.notemesh.core.models import share as _m_share
+        from src.notemesh.core.models import tag as _m_tag
+        from src.notemesh.core.models import user as _m_user
+
         await conn.run_sync(BaseModel.metadata.create_all)
 
     try:
@@ -149,9 +147,7 @@ class EagerAsyncSession(AsyncSession):
                     return
 
                 # Build loader options to eager-load each relationship
-                loaders = [
-                    selectinload(getattr(instance.__class__, rel.key)) for rel in rels
-                ]
+                loaders = [selectinload(getattr(instance.__class__, rel.key)) for rel in rels]
 
                 # Figure out primary key identity; assume single-column PK (BaseModel.id)
                 identity = getattr(instance, "id", None)
@@ -210,9 +206,10 @@ async def test_session(test_engine):
 @pytest.fixture
 def override_get_db(test_session):
     """Override the get_db dependency."""
+
     async def _override_get_db():
         yield test_session
-    
+
     return _override_get_db
 
 
@@ -252,7 +249,7 @@ def test_user_data():
 async def test_user(test_session, test_user_data):
     """Create a test user in the database."""
     from src.notemesh.core.models.user import User
-    
+
     user = User(
         username=test_user_data["username"],
         password_hash=hash_password(test_user_data["password"]),
@@ -260,14 +257,14 @@ async def test_user(test_session, test_user_data):
         is_active=True,
         is_verified=True,
     )
-    
+
     test_session.add(user)
     await test_session.commit()
     await test_session.refresh(user)
-    
+
     # Add the plain password to the user object for testing
     user.plain_password = test_user_data["password"]
-    
+
     return user
 
 
@@ -295,48 +292,49 @@ async def test_note(test_session, test_user, test_note_data):
     """Create a test note in the database."""
     from src.notemesh.core.models.note import Note
     from src.notemesh.core.models.tag import Tag
-    
+
     note = Note(
         title=test_note_data["title"],
         content=test_note_data["content"],
         is_pinned=test_note_data["is_pinned"],
         owner_id=test_user.id,
     )
-    
+
     # Add tags
     for tag_name in test_note_data["tags"]:
         tag = Tag(name=tag_name)
         note.tags.append(tag)
-    
+
     test_session.add(note)
     await test_session.commit()
     await test_session.refresh(note)
-    
+
     return note
 
 
 @pytest.fixture
 def mock_redis(monkeypatch):
     """Mock Redis for testing."""
+
     class MockRedis:
         def __init__(self):
             self.storage = {}
-        
+
         async def get(self, key):
             return self.storage.get(key)
-        
+
         async def set(self, key, value, ex=None):
             self.storage[key] = value
-        
+
         async def delete(self, key):
             if key in self.storage:
                 del self.storage[key]
-        
+
         async def exists(self, key):
             return key in self.storage
-    
+
     mock_redis_instance = MockRedis()
-    
+
     # You might need to patch the actual Redis client creation
     # This depends on how Redis is integrated in your app
     return mock_redis_instance

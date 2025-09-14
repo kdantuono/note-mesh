@@ -3,7 +3,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, and_, or_, func, desc
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -33,8 +33,10 @@ class NoteRepository:
 
     async def get_by_id_and_user(self, note_id: UUID, user_id: UUID) -> Optional[Note]:
         """Get note by ID if owned by user."""
-        stmt = select(Note).options(selectinload(Note.tags)).where(
-            and_(Note.id == note_id, Note.owner_id == user_id)
+        stmt = (
+            select(Note)
+            .options(selectinload(Note.tags))
+            .where(and_(Note.id == note_id, Note.owner_id == user_id))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -68,7 +70,7 @@ class NoteRepository:
         user_id: UUID,
         page: int = 1,
         per_page: int = 20,
-        tag_filter: Optional[List[str]] = None
+        tag_filter: Optional[List[str]] = None,
     ) -> tuple[List[Note], int]:
         """List user notes with pagination and optional tag filter."""
         offset = (page - 1) * per_page
@@ -106,19 +108,13 @@ class NoteRepository:
         return [tag for tag in result.scalars()]
 
     async def search_notes(
-        self,
-        user_id: UUID,
-        query: str,
-        tag_filter: Optional[List[str]] = None
+        self, user_id: UUID, query: str, tag_filter: Optional[List[str]] = None
     ) -> List[Note]:
         """Search notes by content or title."""
         stmt = select(Note).options(selectinload(Note.tags)).where(Note.owner_id == user_id)
 
         # Full-text search on title and content
-        search_condition = or_(
-            Note.title.ilike(f"%{query}%"),
-            Note.content.ilike(f"%{query}%")
-        )
+        search_condition = or_(Note.title.ilike(f"%{query}%"), Note.content.ilike(f"%{query}%"))
         stmt = stmt.where(search_condition)
 
         # Add tag filter

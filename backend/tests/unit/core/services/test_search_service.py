@@ -1,9 +1,10 @@
 import uuid
+from datetime import datetime
+
 import pytest
 
-from src.notemesh.core.services.search_service import SearchService
 from src.notemesh.core.schemas.notes import NoteSearchRequest
-from datetime import datetime
+from src.notemesh.core.services.search_service import SearchService
 
 
 class Dummy:
@@ -26,8 +27,10 @@ class FakeNoteRepo:
                 updated_at=now,
             )
         ]
+
     async def search_notes(self, user_id=None, query=None, tag_filter=None):
         return self.notes
+
     async def get_user_tags(self, uid):
         return self.tags
 
@@ -35,6 +38,7 @@ class FakeNoteRepo:
 @pytest.mark.asyncio
 async def test_search_and_suggestions(monkeypatch):
     import src.notemesh.core.services.search_service as ss
+
     repo = FakeNoteRepo()
     monkeypatch.setattr(ss, "NoteRepository", lambda s: repo, raising=True)
 

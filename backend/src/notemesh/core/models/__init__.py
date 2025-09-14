@@ -14,11 +14,11 @@ Models included:
 """
 
 from .base import BaseModel
-from .user import User
 from .note import Note
-from .tag import Tag, NoteTag
-from .share import Share
 from .refresh_token import RefreshToken
+from .share import Share
+from .tag import NoteTag, Tag
+from .user import User
 
 __all__ = [
     "BaseModel",
