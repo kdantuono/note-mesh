@@ -98,11 +98,20 @@ class NotesManager {
         const notesHTML = this.currentNotes.map(note => this.createNoteCard(note)).join('');
         notesGrid.innerHTML = notesHTML;
 
-        // Set up note card click handlers
+        // Set up note card click and keyboard handlers
         notesGrid.querySelectorAll('.note-card').forEach(card => {
             card.addEventListener('click', () => {
                 const noteId = card.dataset.noteId;
                 this.showNoteDetail(noteId);
+            });
+
+            // Add keyboard navigation
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const noteId = card.dataset.noteId;
+                    this.showNoteDetail(noteId);
+                }
             });
         });
     }
@@ -114,27 +123,66 @@ class NotesManager {
         const remainingTags = note.tags ? Math.max(0, note.tags.length - 3) : 0;
 
         const typeClass = note.note_type || NOTE_TYPES.OWNED;
-        const typeLabel = this.getTypeLabel(typeClass);
+        const ownerInfo = this.getOwnerInfo(note, typeClass);
+        const sharingInfo = this.getSharingInfo(note, typeClass);
 
         return `
-            <div class="note-card ${typeClass}" data-note-id="${note.id}">
+            <div class="note-card ${typeClass}" data-note-id="${note.id}" tabindex="0" role="button" aria-label="Open note: ${this.escapeHtml(note.title)}">
                 <div class="note-card-header">
                     <div>
                         <h3 class="note-title">${this.escapeHtml(note.title)}</h3>
-                        <div class="note-type ${typeClass}">${typeLabel}</div>
+                        <div class="note-sharing-status">${sharingInfo}</div>
                     </div>
                 </div>
-                <div class="note-preview">${this.escapeHtml(preview)}</div>
+                <div class="note-preview">${preview}</div>
                 <div class="note-meta">
-                    <span><i class="fas fa-user"></i> ${this.escapeHtml(note.owner?.full_name || note.owner?.username || 'Unknown')}</span>
-                    <span><i class="fas fa-calendar"></i> ${this.formatDate(note.created_at)}</span>
+                    <span class="owner-info"><i class="fas fa-user" aria-hidden="true"></i> ${ownerInfo}</span>
+                    <span><i class="fas fa-calendar" aria-hidden="true"></i> ${this.formatDate(note.created_at)}</span>
                 </div>
-                <div class="note-tags">
-                    ${tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}
-                    ${remainingTags > 0 ? `<span class="tag">+${remainingTags} more</span>` : ''}
+                <div class="note-tags" role="list" aria-label="Tags">
+                    ${tags.map(tag => `<span class="tag" role="listitem">${this.escapeHtml(tag)}</span>`).join('')}
+                    ${remainingTags > 0 ? `<span class="tag" role="listitem">+${remainingTags} more</span>` : ''}
                 </div>
             </div>
         `;
+    }
+
+    // Get owner information for display
+    getOwnerInfo(note, typeClass) {
+        const currentUser = authManager.getCurrentUser();
+        const ownerName = note.owner?.full_name || note.owner?.username || note.owner_username;
+
+        if (typeClass === NOTE_TYPES.OWNED || note.is_owned) {
+            return '<strong>You</strong>';
+        } else if (ownerName) {
+            if (ownerName === currentUser?.username) {
+                return '<strong>You</strong>';
+            } else {
+                return this.escapeHtml(ownerName);
+            }
+        } else {
+            return 'Unknown';
+        }
+    }
+
+    // Get sharing status information
+    getSharingInfo(note, typeClass) {
+        const shareCount = note.share_count || 0;
+
+        switch (typeClass) {
+            case NOTE_TYPES.OWNED:
+                if (shareCount > 0) {
+                    return `<span class="sharing-badge owned"><i class="fas fa-share-alt" aria-hidden="true"></i> Shared with ${shareCount}</span>`;
+                } else {
+                    return '<span class="sharing-badge private"><i class="fas fa-lock" aria-hidden="true"></i> Private</span>';
+                }
+            case NOTE_TYPES.SHARED_WITH_ME:
+                return '<span class="sharing-badge shared-with-me"><i class="fas fa-share" aria-hidden="true"></i> Shared with you</span>';
+            case NOTE_TYPES.SHARED_BY_ME:
+                return '<span class="sharing-badge shared-by-me"><i class="fas fa-share-alt" aria-hidden="true"></i> Shared by you</span>';
+            default:
+                return '';
+        }
     }
 
     // Get type label for display
@@ -154,9 +202,25 @@ class NotesManager {
     // Create content preview
     createContentPreview(content) {
         if (!content) return '';
-        return content.length > CONFIG.MAX_CONTENT_PREVIEW
-            ? content.substring(0, CONFIG.MAX_CONTENT_PREVIEW) + '...'
-            : content;
+
+        // First create plain text preview for cards
+        const plainText = content.replace(/\n/g, ' ');
+        const preview = plainText.length > CONFIG.MAX_CONTENT_PREVIEW
+            ? plainText.substring(0, CONFIG.MAX_CONTENT_PREVIEW) + '...'
+            : plainText;
+
+        // Process the preview to show if it contains links/media
+        const hasLinks = /(https?:\/\/[^\s]+)/gi.test(content);
+        const hasMedia = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|ogg|mov|mp3|wav|m4a)$/gi.test(content);
+
+        let indicators = '';
+        if (hasMedia) {
+            indicators += '<i class="fas fa-image" title="Contains media" aria-hidden="true"></i> ';
+        } else if (hasLinks) {
+            indicators += '<i class="fas fa-link" title="Contains links" aria-hidden="true"></i> ';
+        }
+
+        return indicators + this.escapeHtml(preview);
     }
 
     // Render pagination
@@ -232,7 +296,7 @@ class NotesManager {
     // Render note detail view
     renderNoteDetail(note) {
         document.getElementById('noteTitle').textContent = note.title;
-        document.getElementById('noteContent').textContent = note.content;
+        document.getElementById('noteContent').innerHTML = this.processNoteContent(note.content);
 
         // Note meta information
         const ownerName = note.owner?.full_name || note.owner?.username || 'Unknown';
@@ -313,16 +377,37 @@ class NotesManager {
         this.loadExistingShares(note.id);
     }
 
-    // Add user to share list
-    addUserToShareList(username, permission = 'read') {
-        // Check if user already exists
+    // Validate and add user to share list
+    async validateAndAddUser(username, permission = 'read') {
+        // Simple validation - check if username is not empty and not the current user
+        const currentUser = authManager.getCurrentUser();
+
+        if (username === currentUser?.username) {
+            showToast('You cannot share with yourself', TOAST_TYPES.WARNING);
+            return;
+        }
+
+        if (username.length < 3) {
+            showToast('Username must be at least 3 characters', TOAST_TYPES.ERROR);
+            return;
+        }
+
+        // Check if user already exists in the list
         const existingIndex = this.shareList.findIndex(user => user.username === username);
         if (existingIndex !== -1) {
-            this.shareList[existingIndex].permission = permission;
-        } else {
-            this.shareList.push({ username, permission });
+            showToast('User already added to share list', TOAST_TYPES.WARNING);
+            return;
         }
+
+        // For now, assume user exists (in a real app, you'd validate against API)
+        this.shareList.push({ username, permission });
         this.renderShareList();
+        showToast(`Added ${username} to share list`, TOAST_TYPES.SUCCESS);
+    }
+
+    // Add user to share list (legacy method)
+    addUserToShareList(username, permission = 'read') {
+        this.validateAndAddUser(username, permission);
     }
 
     // Remove user from share list
@@ -333,17 +418,17 @@ class NotesManager {
 
     // Render share list
     renderShareList() {
-        const listElement = document.getElementById('sharedUsersList');
+        const listElement = document.getElementById('sharedUsersTags');
         if (this.shareList.length === 0) {
-            listElement.innerHTML = '';
+            listElement.innerHTML = '<span style="color: #666; font-style: italic;">No users selected for sharing</span>';
             return;
         }
 
         const html = this.shareList.map(user => `
             <div class="shared-user-tag">
-                <span>${user.username}</span>
+                <span><strong>${user.username}</strong></span>
                 <span class="permission">${user.permission}</span>
-                <button type="button" class="remove-user" onclick="notesManager.removeUserFromShareList('${user.username}')">
+                <button type="button" class="remove-user" onclick="notesManager.removeUserFromShareList('${user.username}')" title="Remove user">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -573,6 +658,54 @@ class NotesManager {
         return div.innerHTML;
     }
 
+    // Process note content to make links clickable and handle multimedia
+    processNoteContent(content) {
+        if (!content) return '';
+
+        // Escape HTML first
+        let processedContent = this.escapeHtml(content);
+
+        // Convert URLs to clickable links
+        const urlRegex = /(https?:\/\/[^\s]+)/gi;
+        processedContent = processedContent.replace(urlRegex, (url) => {
+            // Check if it's an image
+            const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+            const videoExtensions = /\.(mp4|webm|ogg|mov)$/i;
+            const audioExtensions = /\.(mp3|wav|ogg|m4a)$/i;
+
+            if (imageExtensions.test(url)) {
+                return `<div class="media-container">
+                    <img src="${url}" alt="Embedded image" class="embedded-image" loading="lazy" />
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="media-link">${url}</a>
+                </div>`;
+            } else if (videoExtensions.test(url)) {
+                return `<div class="media-container">
+                    <video controls class="embedded-video" preload="metadata">
+                        <source src="${url}">
+                        Your browser does not support the video tag.
+                    </video>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="media-link">${url}</a>
+                </div>`;
+            } else if (audioExtensions.test(url)) {
+                return `<div class="media-container">
+                    <audio controls class="embedded-audio" preload="metadata">
+                        <source src="${url}">
+                        Your browser does not support the audio tag.
+                    </audio>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="media-link">${url}</a>
+                </div>`;
+            } else {
+                // Regular link
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="external-link">${url}</a>`;
+            }
+        });
+
+        // Convert newlines to <br> tags
+        processedContent = processedContent.replace(/\n/g, '<br>');
+
+        return processedContent;
+    }
+
     formatDate(dateString) {
         if (!dateString) return 'Unknown';
         const date = new Date(dateString);
@@ -608,14 +741,14 @@ class NotesManager {
         document.getElementById('noteForm').addEventListener('submit', (e) => this.handleNoteSubmit(e));
         document.getElementById('cancelEdit').addEventListener('click', () => this.showDashboard());
 
-        // Set up share users input
-        document.getElementById('shareWithUsers').addEventListener('keypress', (e) => {
+        // Set up share users input (simplified)
+        document.getElementById('shareUsernameInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const username = e.target.value.trim();
                 const permission = document.getElementById('sharePermissionSelect').value;
                 if (username) {
-                    this.addUserToShareList(username, permission);
+                    this.validateAndAddUser(username, permission);
                     e.target.value = '';
                 }
             }

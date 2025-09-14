@@ -4,37 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NoteMesh - Shared Notes Platform</title>
+    <meta name="description" content="NoteMesh is a collaborative note-taking platform for creating, sharing, and managing notes with other users.">
     <link rel="stylesheet" href="css/styles.css?v=2.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+    <!-- Skip to main content for screen readers -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <!-- Navigation -->
-    <nav class="navbar">
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="nav-container">
             <div class="nav-brand">
-                <i class="fas fa-sticky-note"></i>
+                <i class="fas fa-sticky-note" aria-hidden="true"></i>
                 <span>NoteMesh</span>
             </div>
             <div class="nav-menu" id="navMenu">
-                <div class="nav-links" id="navLinks">
-                    <a href="#" class="nav-link" id="dashboardLink">Dashboard</a>
-                    <a href="#" class="nav-link" id="createNoteLink">New Note</a>
-                    <a href="#" class="nav-link" id="profileLink">Profile</a>
-                    <a href="#" class="nav-link" id="logoutLink">Logout</a>
+                <div class="nav-links" id="navLinks" role="menubar">
+                    <a href="#" class="nav-link" id="dashboardLink" role="menuitem">Dashboard</a>
+                    <a href="#" class="nav-link" id="createNoteLink" role="menuitem">New Note</a>
+                    <a href="#" class="nav-link" id="profileLink" role="menuitem">Profile</a>
+                    <a href="#" class="nav-link" id="logoutLink" role="menuitem">Logout</a>
                 </div>
-                <div class="user-info" id="userInfo">
+                <div class="user-info" id="userInfo" role="status" aria-live="polite">
                     <span id="currentUser">Guest</span>
                 </div>
             </div>
-            <div class="nav-toggle" id="navToggle">
-                <i class="fas fa-bars"></i>
-            </div>
+            <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu" aria-label="Toggle navigation menu">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+            </button>
         </div>
     </nav>
 
-    <main class="main-content">
+    <main class="main-content" id="main-content" role="main">
         <!-- Login/Register Section -->
-        <section id="authSection" class="auth-section">
+        <section id="authSection" class="auth-section" aria-labelledby="authTitle">
             <div class="auth-container">
                 <div class="auth-card">
                     <div class="auth-header">
@@ -43,14 +46,18 @@
                     </div>
 
                     <!-- Login Form -->
-                    <form id="loginForm" class="auth-form">
+                    <form id="loginForm" class="auth-form" aria-labelledby="authTitle" novalidate>
                         <div class="form-group">
                             <label for="loginUsername">Username</label>
-                            <input type="text" id="loginUsername" name="username" required>
+                            <input type="text" id="loginUsername" name="username" required
+                                   aria-describedby="loginUsernameError" autocomplete="username">
+                            <div id="loginUsernameError" class="error-message" aria-live="polite"></div>
                         </div>
                         <div class="form-group">
                             <label for="loginPassword">Password</label>
-                            <input type="password" id="loginPassword" name="password" required>
+                            <input type="password" id="loginPassword" name="password" required
+                                   aria-describedby="loginPasswordError" autocomplete="current-password">
+                            <div id="loginPasswordError" class="error-message" aria-live="polite"></div>
                         </div>
                         <button type="submit" class="btn btn-primary">Login</button>
                         <p class="auth-switch">
@@ -198,24 +205,21 @@
                         <input type="text" id="noteTagsInput" name="tags" placeholder="work, important, project">
                     </div>
                     <div class="form-group">
-                        <label for="shareWithUsers">Share with Users (optional)</label>
-                        <div class="share-users-container">
-                            <input type="text" id="shareWithUsers" placeholder="Enter username and press Enter">
-                            <div class="permission-selector">
-                                <label for="sharePermission">Permission:</label>
-                                <select id="sharePermissionSelect">
-                                    <option value="read">Read Only</option>
-                                    <option value="write">Read & Write</option>
-                                </select>
-                            </div>
+                        <label for="shareUsernameInput">Share with User (optional)</label>
+                        <div class="share-input-container">
+                            <input type="text" id="shareUsernameInput" placeholder="Enter username and press Enter to add">
+                            <select id="sharePermissionSelect">
+                                <option value="read">Read Only</option>
+                                <option value="write">Read & Write</option>
+                            </select>
                         </div>
-                        <div class="shared-users-list" id="sharedUsersList">
-                            <!-- Added users will appear here -->
+                        <div class="shared-users-tags" id="sharedUsersTags">
+                            <!-- Added users will appear here as removable tags -->
                         </div>
 
                         <!-- Existing shares (for editing) -->
                         <div id="existingShares" class="existing-shares-section" style="display: none;">
-                            <h4>Current Sharing:</h4>
+                            <label>Currently Shared With:</label>
                             <div id="existingSharesList" class="existing-shares-list">
                                 <!-- Existing shares will appear here -->
                             </div>
