@@ -54,7 +54,9 @@ class SharingService(ISharingService):
                 )
 
             # Check if share already exists
-            existing_share = await self.share_repo.get_existing_share(request.note_id, target_user.id)
+            existing_share = await self.share_repo.get_existing_share(
+                request.note_id, target_user.id
+            )
             if existing_share:
                 # Update existing share instead of creating duplicate
                 share = await self.share_repo.update_share(
@@ -63,7 +65,7 @@ class SharingService(ISharingService):
                         "permission": request.permission_level,
                         "share_message": request.message,
                         "status": "active",  # Reactivate if was revoked
-                    }
+                    },
                 )
             else:
                 # Create new share
@@ -116,9 +118,11 @@ class SharingService(ISharingService):
             hyperlinks=getattr(note, "hyperlinks", []) or [],
             owner_id=note.owner_id,
             owner_username=owner.username if owner else "Unknown",
-            owner_display_name=owner.full_name
-            if owner and hasattr(owner, "full_name")
-            else (owner.username if owner else "Unknown"),
+            owner_display_name=(
+                owner.full_name
+                if owner and hasattr(owner, "full_name")
+                else (owner.username if owner else "Unknown")
+            ),
             shared_by_id=note.owner_id,  # Fallback to owner as sharer
             shared_by_username=owner.username if owner else "Unknown",
             permission_level=permission_level,
@@ -190,13 +194,17 @@ class SharingService(ISharingService):
             note_id=share.note_id,
             note_title=share.note.title if getattr(share, "note", None) else "Unknown",
             shared_with_user_id=shared_with_user_id,
-            shared_with_username=share.shared_with_user.username
-            if getattr(share, "shared_with_user", None)
-            else "Unknown",
-            shared_with_display_name=share.shared_with_user.full_name
-            if getattr(share, "shared_with_user", None)
-            and hasattr(share.shared_with_user, "full_name")
-            else "Unknown",
+            shared_with_username=(
+                share.shared_with_user.username
+                if getattr(share, "shared_with_user", None)
+                else "Unknown"
+            ),
+            shared_with_display_name=(
+                share.shared_with_user.full_name
+                if getattr(share, "shared_with_user", None)
+                and hasattr(share.shared_with_user, "full_name")
+                else "Unknown"
+            ),
             permission_level=getattr(share, "permission", "read"),
             message=getattr(share, "share_message", None),
             shared_at=getattr(share, "created_at", datetime.utcnow()),

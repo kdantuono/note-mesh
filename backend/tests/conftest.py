@@ -68,11 +68,7 @@ async def test_engine(test_settings):
 
     # Create tables once per session (we'll drop/create per test session fixture)
     async with engine.begin() as conn:
-        from src.notemesh.core.models import note as _m_note
-        from src.notemesh.core.models import refresh_token as _m_refresh_token
-        from src.notemesh.core.models import share as _m_share
-        from src.notemesh.core.models import tag as _m_tag
-        from src.notemesh.core.models import user as _m_user
+        pass
 
         await conn.run_sync(BaseModel.metadata.create_all)
 

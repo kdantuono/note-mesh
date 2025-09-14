@@ -9,9 +9,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
-
-from .common import PaginationResponse
+from pydantic import BaseModel, Field, field_validator
 
 
 class ShareRequest(BaseModel):

@@ -1,6 +1,5 @@
 # Database connection setup
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
 from .config import get_settings
 from .core.models.base import BaseModel

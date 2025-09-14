@@ -116,7 +116,11 @@ async def test_share_note_happy_path(monkeypatch):
     svc = SharingService(session=None)
 
     req = Dummy(
-        note_id=note_id, shared_with_usernames=["alice"], permission_level="read", message="hi", expires_at=None
+        note_id=note_id,
+        shared_with_usernames=["alice"],
+        permission_level="read",
+        message="hi",
+        expires_at=None,
     )
     out = await svc.share_note(user_id, req)
     assert len(out) == 1
@@ -141,7 +145,11 @@ async def test_share_note_user_not_found(monkeypatch):
     svc = SharingService(session=None)
 
     req = Dummy(
-        note_id=note_id, shared_with_usernames=["ghost"], permission_level="read", message="hi", expires_at=None
+        note_id=note_id,
+        shared_with_usernames=["ghost"],
+        permission_level="read",
+        message="hi",
+        expires_at=None,
     )
     with pytest.raises(HTTPException) as ei:
         await svc.share_note(user_id, req)

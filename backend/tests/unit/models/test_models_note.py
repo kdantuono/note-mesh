@@ -9,7 +9,7 @@ import pytest
 
 from src.notemesh.core.models.note import Note
 from src.notemesh.core.models.share import Share
-from src.notemesh.core.models.tag import NoteTag, Tag
+from src.notemesh.core.models.tag import Tag
 from src.notemesh.core.models.user import User
 
 

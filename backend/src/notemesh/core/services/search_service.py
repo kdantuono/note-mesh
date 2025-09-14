@@ -1,12 +1,12 @@
 """Search service implementation."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories.note_repository import NoteRepository
-from ..schemas.notes import NoteResponse, NoteSearchRequest, NoteSearchResponse
+from ..schemas.notes import NoteSearchRequest, NoteSearchResponse
 from .interfaces import ISearchService
 
 

@@ -7,12 +7,10 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from ..models.note import Note
-from ..models.tag import NoteTag
-from ..models.tag import Tag
-from ..models.tag import Tag as CoreTag
+from ..models.tag import NoteTag, Tag
 from ..models.user import User
 from ..repositories.note_repository import NoteRepository
 from ..schemas.notes import NoteCreate, NoteListItem, NoteListResponse, NoteResponse, NoteUpdate
@@ -36,9 +34,7 @@ class NoteService(INoteService):
         content_links = self._extract_hyperlinks_from_text(request.content)
 
         # Merge explicit hyperlinks with extracted ones
-        all_hyperlinks = list(set(
-            [str(link) for link in request.hyperlinks] + content_links
-        ))
+        all_hyperlinks = list(set([str(link) for link in request.hyperlinks] + content_links))
 
         # Create note
         note_data = {

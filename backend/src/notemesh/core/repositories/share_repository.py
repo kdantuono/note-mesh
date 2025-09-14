@@ -170,12 +170,7 @@ class ShareRepository:
                 selectinload(Share.shared_by_user),
                 selectinload(Share.shared_with_user),
             )
-            .where(
-                and_(
-                    Share.note_id == note_id,
-                    Share.shared_with_user_id == shared_with_user_id
-                )
-            )
+            .where(and_(Share.note_id == note_id, Share.shared_with_user_id == shared_with_user_id))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

@@ -131,7 +131,7 @@ class TestUserModel:
         test_session.add(note)
         await test_session.commit()
 
-        user_id = user.id
+        user.id
         note_id = note.id
 
         # Delete user

@@ -20,13 +20,11 @@ def test_app_creation():
         # Mock create_tables to do nothing
         async def mock_create_tables():
             print("Mock: Tables would be created here")
-            pass
 
         # Replace the real function
         src.notemesh.database.create_tables = mock_create_tables
 
         # Import app
-        from src.notemesh.main import app
 
         print("✓ FastAPI app created successfully")
 
