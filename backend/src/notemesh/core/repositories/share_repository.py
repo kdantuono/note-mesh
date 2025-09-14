@@ -131,7 +131,7 @@ class ShareRepository:
 
         return {
             "can_read": is_owner or shared_note is not None,
-            "can_write": is_owner or (shared_note and shared_note.permission_level == "write"),
+            "can_write": is_owner or (shared_note and shared_note.permission == "write"),
             "can_share": is_owner,
             "is_owner": is_owner,
         }
@@ -160,3 +160,35 @@ class ShareRepository:
             "shares_received": shares_received,
             "unique_notes_shared": unique_notes_shared,
         }
+
+    async def get_existing_share(self, note_id: UUID, shared_with_user_id: UUID) -> Optional[Share]:
+        """Get existing share for note and user."""
+        stmt = (
+            select(Share)
+            .options(
+                selectinload(Share.note),
+                selectinload(Share.shared_by_user),
+                selectinload(Share.shared_with_user),
+            )
+            .where(
+                and_(
+                    Share.note_id == note_id,
+                    Share.shared_with_user_id == shared_with_user_id
+                )
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_share(self, share_id: UUID, update_data: dict) -> Share:
+        """Update existing share."""
+        share = await self.get_by_id(share_id)
+        if not share:
+            raise ValueError(f"Share {share_id} not found")
+
+        for key, value in update_data.items():
+            setattr(share, key, value)
+
+        await self.session.commit()
+        await self.session.refresh(share, ["note", "shared_by_user", "shared_with_user"])
+        return share

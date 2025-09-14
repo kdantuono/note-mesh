@@ -53,16 +53,31 @@ class SharingService(ISharingService):
                     detail="Cannot share note with yourself",
                 )
 
-            # Create share
-            share_data = {
-                "note_id": request.note_id,
-                "shared_by_user_id": user_id,
-                "shared_with_user_id": target_user.id,
-                "permission_level": request.permission_level,
-                "message": request.message,
-            }
+            # Check if share already exists
+            existing_share = await self.share_repo.get_existing_share(request.note_id, target_user.id)
+            if existing_share:
+                # Update existing share instead of creating duplicate
+                share = await self.share_repo.update_share(
+                    existing_share.id,
+                    {
+                        "permission": request.permission_level,
+                        "share_message": request.message,
+                        "status": "active",  # Reactivate if was revoked
+                    }
+                )
+            else:
+                # Create new share
+                share_data = {
+                    "note_id": request.note_id,
+                    "shared_by_user_id": user_id,
+                    "shared_with_user_id": target_user.id,
+                    "permission": request.permission_level,
+                    "share_message": request.message,
+                    "expires_at": request.expires_at,
+                }
 
-            share = await self.share_repo.create_share(share_data)
+                share = await self.share_repo.create_share(share_data)
+
             share_responses.append(self._share_to_response(share))
 
         return share_responses
@@ -182,8 +197,8 @@ class SharingService(ISharingService):
             if getattr(share, "shared_with_user", None)
             and hasattr(share.shared_with_user, "full_name")
             else "Unknown",
-            permission_level=getattr(share, "permission_level", "read"),
-            message=getattr(share, "message", None),
+            permission_level=getattr(share, "permission", "read"),
+            message=getattr(share, "share_message", None),
             shared_at=getattr(share, "created_at", datetime.utcnow()),
             expires_at=getattr(share, "expires_at", None),
             last_accessed=getattr(share, "last_accessed", None),

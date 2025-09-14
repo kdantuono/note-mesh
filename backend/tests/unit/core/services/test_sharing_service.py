@@ -26,11 +26,11 @@ class FakeShareRepo:
             shared_with_user=Dummy(
                 id=data.get("shared_with_user_id", uuid.uuid4()), username="u", full_name="U"
             ),
-            permission_level=data.get("permission_level", "read"),
-            message=data.get("message"),
+            permission=data.get("permission", "read"),
+            share_message=data.get("share_message"),
             created_at=datetime.utcnow(),
             expires_at=None,
-            last_accessed=None,
+            last_accessed_at=None,
             is_active=True,
             access_count=0,
         )
@@ -54,6 +54,26 @@ class FakeShareRepo:
 
     async def get_share_stats(self, user_id):
         return {"shares_given": 1, "shares_received": 2, "unique_notes_shared": 1}
+
+    async def get_existing_share(self, note_id, shared_with_user_id):
+        # For testing, return None (no existing share)
+        return None
+
+    async def update_share(self, share_id, update_data):
+        # For testing, return a dummy updated share
+        return Dummy(
+            id=share_id,
+            note_id=uuid.uuid4(),
+            note=Dummy(title="T"),
+            shared_with_user=Dummy(id=uuid.uuid4(), username="u", full_name="U"),
+            permission=update_data.get("permission", "read"),
+            share_message=update_data.get("share_message"),
+            created_at=datetime.utcnow(),
+            expires_at=None,
+            last_accessed_at=None,
+            is_active=True,
+            access_count=0,
+        )
 
 
 class FakeUserRepo:
@@ -96,7 +116,7 @@ async def test_share_note_happy_path(monkeypatch):
     svc = SharingService(session=None)
 
     req = Dummy(
-        note_id=note_id, shared_with_usernames=["alice"], permission_level="read", message="hi"
+        note_id=note_id, shared_with_usernames=["alice"], permission_level="read", message="hi", expires_at=None
     )
     out = await svc.share_note(user_id, req)
     assert len(out) == 1
@@ -121,7 +141,7 @@ async def test_share_note_user_not_found(monkeypatch):
     svc = SharingService(session=None)
 
     req = Dummy(
-        note_id=note_id, shared_with_usernames=["ghost"], permission_level="read", message="hi"
+        note_id=note_id, shared_with_usernames=["ghost"], permission_level="read", message="hi", expires_at=None
     )
     with pytest.raises(HTTPException) as ei:
         await svc.share_note(user_id, req)
