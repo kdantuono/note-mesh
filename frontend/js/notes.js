@@ -7,6 +7,7 @@ class NotesManager {
         this.currentFilters = {};
         this.currentNote = null;
         this.isEditing = false;
+        this.shareList = []; // Lista degli utenti con cui condividere
     }
 
     // Load and display notes
@@ -289,6 +290,11 @@ class NotesManager {
             this.populateNoteForm(this.currentNote);
         } else {
             document.getElementById('noteForm').reset();
+            // Reset share list for new notes
+            this.shareList = [];
+            this.renderShareList();
+            // Hide existing shares section for new notes
+            document.getElementById('existingShares').style.display = 'none';
         }
     }
 
@@ -298,6 +304,131 @@ class NotesManager {
         document.getElementById('noteContentInput').value = note.content || '';
         document.getElementById('noteTagsInput').value = note.tags ? note.tags.join(', ') : '';
         document.getElementById('isPinnedInput').checked = note.is_pinned || false;
+
+        // Reset share list when editing
+        this.shareList = [];
+        this.renderShareList();
+
+        // Load existing shares for this note
+        this.loadExistingShares(note.id);
+    }
+
+    // Add user to share list
+    addUserToShareList(username, permission = 'read') {
+        // Check if user already exists
+        const existingIndex = this.shareList.findIndex(user => user.username === username);
+        if (existingIndex !== -1) {
+            this.shareList[existingIndex].permission = permission;
+        } else {
+            this.shareList.push({ username, permission });
+        }
+        this.renderShareList();
+    }
+
+    // Remove user from share list
+    removeUserFromShareList(username) {
+        this.shareList = this.shareList.filter(user => user.username !== username);
+        this.renderShareList();
+    }
+
+    // Render share list
+    renderShareList() {
+        const listElement = document.getElementById('sharedUsersList');
+        if (this.shareList.length === 0) {
+            listElement.innerHTML = '';
+            return;
+        }
+
+        const html = this.shareList.map(user => `
+            <div class="shared-user-tag">
+                <span>${user.username}</span>
+                <span class="permission">${user.permission}</span>
+                <button type="button" class="remove-user" onclick="notesManager.removeUserFromShareList('${user.username}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+        listElement.innerHTML = html;
+    }
+
+    // Share note with multiple users
+    async shareNoteWithUsers(noteId, usersList) {
+        const promises = usersList.map(user =>
+            apiClient.shareNote(noteId, user.username, user.permission)
+        );
+
+        try {
+            await Promise.all(promises);
+            showToast(`Note shared with ${usersList.length} user(s)`, TOAST_TYPES.SUCCESS);
+        } catch (error) {
+            console.error('Failed to share with some users:', error);
+            showToast('Note saved, but sharing failed for some users', TOAST_TYPES.WARNING);
+        }
+    }
+
+    // Load existing shares for a note
+    async loadExistingShares(noteId) {
+        try {
+            // Try to get shares using the API
+            const sharesData = await apiClient.getShares('given', 1, 100);
+
+            // Filter shares for this specific note
+            const noteShares = sharesData.shares?.filter(share =>
+                share.note_id === noteId || share.note?.id === noteId
+            ) || [];
+
+            this.renderExistingShares(noteShares);
+
+            // Show existing shares section if there are any
+            const existingSharesSection = document.getElementById('existingShares');
+            if (noteShares.length > 0) {
+                existingSharesSection.style.display = 'block';
+            } else {
+                existingSharesSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Failed to load existing shares:', error);
+            // Hide existing shares section on error
+            document.getElementById('existingShares').style.display = 'none';
+        }
+    }
+
+    // Render existing shares
+    renderExistingShares(shares) {
+        const listElement = document.getElementById('existingSharesList');
+
+        if (shares.length === 0) {
+            listElement.innerHTML = '<p style="color: #666; font-style: italic;">Not shared with anyone</p>';
+            return;
+        }
+
+        const html = shares.map(share => `
+            <div class="existing-share-tag" data-share-id="${share.id}">
+                <span>${share.shared_with_username}</span>
+                <span class="permission">${share.permission}</span>
+                <button type="button" class="revoke-share" onclick="notesManager.revokeExistingShare('${share.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+
+        listElement.innerHTML = html;
+    }
+
+    // Revoke existing share
+    async revokeExistingShare(shareId) {
+        try {
+            await apiClient.revokeShare(shareId);
+            showToast('Share revoked successfully', TOAST_TYPES.SUCCESS);
+
+            // Reload existing shares to refresh the display
+            if (this.currentNote?.id) {
+                this.loadExistingShares(this.currentNote.id);
+            }
+        } catch (error) {
+            console.error('Failed to revoke share:', error);
+            showToast('Failed to revoke share', TOAST_TYPES.ERROR);
+        }
     }
 
     // Handle note form submission
@@ -323,12 +454,18 @@ class NotesManager {
         }
 
         try {
+            let savedNote;
             if (this.isEditing && this.currentNote) {
-                await apiClient.updateNote(this.currentNote.id, noteData);
+                savedNote = await apiClient.updateNote(this.currentNote.id, noteData);
                 showToast('Note updated successfully', TOAST_TYPES.SUCCESS);
             } else {
-                await apiClient.createNote(noteData);
+                savedNote = await apiClient.createNote(noteData);
                 showToast('Note created successfully', TOAST_TYPES.SUCCESS);
+            }
+
+            // Handle sharing if users were selected
+            if (this.shareList.length > 0 && savedNote?.id) {
+                await this.shareNoteWithUsers(savedNote.id, this.shareList);
             }
 
             this.showDashboard();
@@ -366,21 +503,50 @@ class NotesManager {
         const tagFilter = document.getElementById('tagFilter').value.trim();
         const ownerFilter = document.getElementById('ownerFilter').value;
 
-        const filters = {};
-
-        if (searchQuery) {
-            filters.q = searchQuery;
+        // If no search query, load regular notes
+        if (!searchQuery && !tagFilter) {
+            const filters = {};
+            if (ownerFilter !== 'all') {
+                filters.owner_filter = ownerFilter;
+            }
+            this.loadNotes(1, filters);
+            return;
         }
 
-        if (tagFilter) {
-            filters.tags = tagFilter;
-        }
+        try {
+            // Use search API for text search
+            const filters = {
+                page: 1,
+                per_page: CONFIG.ITEMS_PER_PAGE
+            };
 
-        if (ownerFilter !== 'all') {
-            filters.owner_filter = ownerFilter;
-        }
+            // Add tag filters
+            if (tagFilter) {
+                filters.tags = [tagFilter];
+            }
 
-        this.loadNotes(1, filters);
+            const searchResults = await apiClient.searchNotes(searchQuery || '*', filters);
+
+            // Process search results to match loadNotes format
+            this.currentNotes = this.markNotesAsType(searchResults.items || [], NOTE_TYPES.OWNED);
+            this.currentPage = searchResults.page || 1;
+            this.totalPages = searchResults.pages || 1;
+            this.currentFilters = { q: searchQuery, tagFilter, ownerFilter };
+
+            this.renderNotes();
+            this.renderPagination();
+
+            // Show search info
+            const searchInfo = searchQuery ?
+                `Found ${searchResults.total || 0} results for "${searchQuery}"` :
+                `Filtered by tag: ${tagFilter}`;
+
+            showToast(searchInfo, TOAST_TYPES.INFO);
+
+        } catch (error) {
+            console.error('Search failed:', error);
+            showToast(error.message || 'Search failed', TOAST_TYPES.ERROR);
+        }
     }
 
     // Clear all filters
@@ -441,6 +607,19 @@ class NotesManager {
         // Set up note form
         document.getElementById('noteForm').addEventListener('submit', (e) => this.handleNoteSubmit(e));
         document.getElementById('cancelEdit').addEventListener('click', () => this.showDashboard());
+
+        // Set up share users input
+        document.getElementById('shareWithUsers').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const username = e.target.value.trim();
+                const permission = document.getElementById('sharePermissionSelect').value;
+                if (username) {
+                    this.addUserToShareList(username, permission);
+                    e.target.value = '';
+                }
+            }
+        });
 
         // Set up note actions
         document.getElementById('editNoteBtn').addEventListener('click', () => {

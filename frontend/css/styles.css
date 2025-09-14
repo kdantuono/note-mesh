@@ -1065,3 +1065,128 @@ body {
         flex-direction: column;
     }
 }
+
+/* Share Users in Note Editor */
+.share-users-container {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1rem;
+}
+
+.share-users-container input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.permission-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.permission-selector label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.permission-selector select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+.shared-users-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.shared-user-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.9rem;
+    color: #1976d2;
+}
+
+.shared-user-tag .permission {
+    background: #2196f3;
+    color: white;
+    border-radius: 10px;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+.shared-user-tag .remove-user {
+    background: none;
+    border: none;
+    color: #f44336;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.shared-user-tag .remove-user:hover {
+    color: #d32f2f;
+}
+
+/* Existing shares section */
+.existing-shares-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.existing-shares-section h4 {
+    color: #333;
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+}
+
+.existing-shares-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.existing-share-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff3e0;
+    border: 1px solid #ff9800;
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.9rem;
+    color: #e65100;
+}
+
+.existing-share-tag .permission {
+    background: #ff9800;
+    color: white;
+    border-radius: 10px;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+.existing-share-tag .revoke-share {
+    background: none;
+    border: none;
+    color: #f44336;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.existing-share-tag .revoke-share:hover {
+    color: #d32f2f;
+}
