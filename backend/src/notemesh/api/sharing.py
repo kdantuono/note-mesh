@@ -52,7 +52,7 @@ async def get_shared_note(
 
 @router.get("/", response_model=ShareListResponse)
 async def list_shares(
-    type: str = Query("given", regex="^(given|received)$"),
+    type: str = Query("given", pattern="^(given|received)$"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user_id: UUID = Depends(get_current_user_id),

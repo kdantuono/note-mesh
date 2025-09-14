@@ -27,12 +27,17 @@ async def lifespan(app: FastAPI):
         'debug': settings.debug
     })
 
-    try:
-        await create_tables()
-        logger.info("Database tables created/verified")
-    except Exception as e:
-        logger.error("Failed to create database tables", exc_info=e)
-        raise
+    # Allow tests to skip touching the real DB (e.g., when using SQLite in-memory)
+    import os
+    if os.getenv("NOTEMESH_SKIP_LIFESPAN_DB") == "1":
+        logger.info("Skipping DB table creation due to NOTEMESH_SKIP_LIFESPAN_DB=1")
+    else:
+        try:
+            await create_tables()
+            logger.info("Database tables created/verified")
+        except Exception as e:
+            logger.error("Failed to create database tables", exc_info=e)
+            raise
 
     yield
 

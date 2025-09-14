@@ -82,6 +82,9 @@ class Settings(BaseSettings):
         description="Log format"
     )
 
+    # Environment
+    environment: str = Field(default="development", description="Environment name")
+
 
 # Global settings instance
 settings = Settings()

@@ -1,15 +1,15 @@
 # Tag models for organizing notes
 import uuid
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 from datetime import datetime
 
 from sqlalchemy import String, Integer, Index, ForeignKey, UniqueConstraint, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import event
 from sqlalchemy.orm import attributes as orm_attributes
 
 from .base import BaseModel
+from .types import GUID
 
 if TYPE_CHECKING:
     from .note import Note
@@ -27,16 +27,20 @@ class Tag(BaseModel):
     color: Mapped[str | None] = mapped_column(String(7), nullable=True)  # hex colors
 
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
 
     note_tags: Mapped[List["NoteTag"]] = relationship(
-        "NoteTag", back_populates="tag", cascade="all, delete-orphan"
+        "NoteTag",
+        back_populates="tag",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        overlaps="notes,tags",
     )
 
-    created_by_user: Mapped["User" | None] = relationship("User")
+    created_by_user: Mapped[Optional["User"]] = relationship("User", lazy="selectin")
 
     # Many-to-many relationship with notes through note_tags
     notes: Mapped[List["Note"]] = relationship(
@@ -100,21 +104,21 @@ class NoteTag(BaseModel):
     __tablename__ = "note_tags"
 
     note_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False
     )
     tag_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("tags.id", ondelete="CASCADE"), nullable=False
     )
 
     tagged_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     tagged_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     # Relationships
-    note: Mapped["Note"] = relationship("Note", back_populates="note_tags", overlaps="tags,notes")
-    tag: Mapped["Tag"] = relationship("Tag", back_populates="note_tags", overlaps="tags,notes")
-    tagged_by_user: Mapped["User" | None] = relationship("User")
+    note: Mapped["Note"] = relationship("Note", back_populates="note_tags", overlaps="tags,notes", lazy="selectin")
+    tag: Mapped["Tag"] = relationship("Tag", back_populates="note_tags", overlaps="tags,notes", lazy="selectin")
+    tagged_by_user: Mapped[Optional["User"]] = relationship("User", lazy="selectin")
 
     __table_args__ = (
         UniqueConstraint("note_id", "tag_id", name="uq_note_tags_note_tag"),

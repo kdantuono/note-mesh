@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from sqlalchemy import String, DateTime, Index, ForeignKey, UniqueConstraint, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
+from .types import GUID
 
 if TYPE_CHECKING:
     from .user import User
@@ -29,13 +29,13 @@ class Share(BaseModel):
     __tablename__ = "shares"
 
     note_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("notes.id", ondelete="CASCADE"), nullable=False
     )
     shared_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     shared_with_user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
 
     # Permission level for this share (read/write)
@@ -55,9 +55,19 @@ class Share(BaseModel):
     access_count: Mapped[int] = mapped_column(default=0, nullable=False)
     share_message: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    note: Mapped["Note"] = relationship("Note", back_populates="shares")
-    shared_by_user: Mapped["User"] = relationship("User", foreign_keys=[shared_by_user_id], back_populates="shares_given")
-    shared_with_user: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id], back_populates="shares_received")
+    note: Mapped["Note"] = relationship("Note", back_populates="shares", lazy="selectin")
+    shared_by_user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[shared_by_user_id],
+        back_populates="shares_given",
+        lazy="selectin",
+    )
+    shared_with_user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[shared_with_user_id],
+        back_populates="shares_received",
+        lazy="selectin",
+    )
 
     __table_args__ = (
         UniqueConstraint("note_id", "shared_with_user_id", name="uq_shares_note_recipient"),

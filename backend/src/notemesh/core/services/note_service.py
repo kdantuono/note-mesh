@@ -13,9 +13,9 @@ from .interfaces import INoteService
 from ..repositories.note_repository import NoteRepository
 from ..schemas.notes import NoteCreate, NoteUpdate, NoteResponse, NoteListResponse, NoteListItem
 from ..models.tag import Tag
-from notemesh.core.models.tag import Tag as CoreTag, NoteTag
-from notemesh.core.models.note import Note
-from notemesh.core.models.user import User
+from ..models.tag import Tag as CoreTag, NoteTag
+from ..models.note import Note
+from ..models.user import User
 
 
 class NoteService(INoteService):

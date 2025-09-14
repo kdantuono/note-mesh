@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 import secrets
 
 from sqlalchemy import String, Boolean, DateTime, Index, ForeignKey, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
+from .types import GUID
 
 if TYPE_CHECKING:
     from .user import User
@@ -21,11 +21,11 @@ class RefreshToken(BaseModel):
 
     token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     device_identifier: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     token_family_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, default=uuid.uuid4
+        GUID(), nullable=False, default=uuid.uuid4
     )
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

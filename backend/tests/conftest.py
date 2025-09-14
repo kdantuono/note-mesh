@@ -1,19 +1,18 @@
-"""
-Shared pytest fixtures for all tests.
-"""
+"""Shared pytest fixtures configured to use SQLite in-memory for unit tests."""
 
 import asyncio
 import os
-from typing import AsyncGenerator, Generator
 from uuid import uuid4
+import logging
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool, StaticPool
+from sqlalchemy import event, select
+from sqlalchemy.orm import sessionmaker, selectinload
+from sqlalchemy.orm import attributes as orm_attributes
+from sqlalchemy.pool import StaticPool
 
 from src.notemesh.main import app
 from src.notemesh.database import get_db_session
@@ -22,84 +21,9 @@ from src.notemesh.config import Settings, get_settings
 from src.notemesh.security.password import hash_password
 from src.notemesh.security.jwt import create_access_token
 
+# Silence extremely verbose DEBUG logs from aiosqlite to keep test output readable
+logging.getLogger("aiosqlite").setLevel(logging.WARNING)
 
-# Test database URL - using SQLite for tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-TEST_DATABASE_URL_SYNC = "sqlite:///:memory:"
-
-
-# --- Test-local SQLite shims for Postgres-specific types (UUID, ARRAY) ---
-# This avoids changing production code while allowing model tests to run on SQLite.
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy import String
-import json
-
-try:
-    # Render PostgreSQL UUID as CHAR(36) on SQLite
-    @compiles(PGUUID, "sqlite")
-    def _compile_uuid_sqlite(type_, compiler, **kw):
-        return "CHAR(36)"
-except Exception:
-    # If compiles was already registered in another test run, ignore
-    pass
-
-
-@pytest.fixture(scope="session", autouse=True)
-def sqlite_type_shims():
-    """Monkeypatch custom types to be SQLite-friendly for tests.
-
-    - Map HttpUrlListType (ARRAY on PG) to a JSON string stored in a VARCHAR on SQLite.
-    - UUID mapping is handled by the @compiles decorator above.
-    """
-    # Only apply when using SQLite in tests
-    if not TEST_DATABASE_URL.startswith("sqlite"):
-        yield
-        return
-
-    # Lazy import to avoid affecting production modules
-    from src.notemesh.core.models.types import HttpUrlListType
-
-    # Keep original methods to restore if needed (not necessary across session scope)
-    def _load_dialect_impl(self, dialect):
-        # On SQLite, fallback to String storage (JSON-encoded)
-        if dialect.name == "sqlite":
-            return dialect.type_descriptor(String(2000))
-        # Default path (Postgres ARRAY)
-        return dialect.type_descriptor(self.impl)
-
-    def _process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        if dialect.name == "sqlite":
-            # Store as JSON string
-            urls = [str(u) for u in value]
-            # Enforce max 500 chars per URL similar to PG constraint by raising
-            for u in urls:
-                if len(u) > 500:
-                    raise ValueError("Hyperlink exceeds maximum length of 500 characters")
-            return json.dumps(urls)
-        # On PG, store as list of strings
-        return [str(u) for u in value]
-
-    def _process_result_value(self, value, dialect):
-        if value is None:
-            return None
-        if dialect.name == "sqlite":
-            # Parse JSON string back to list of strings
-            try:
-                return json.loads(value)
-            except Exception:
-                return value
-        # On PG, it's already a list of strings
-        return value
-
-    # Apply monkeypatches
-    HttpUrlListType.load_dialect_impl = _load_dialect_impl  # type: ignore[attr-defined]
-    HttpUrlListType.process_bind_param = _process_bind_param  # type: ignore[assignment]
-    HttpUrlListType.process_result_value = _process_result_value  # type: ignore[assignment]
-
-    yield
 
 
 @pytest.fixture(scope="session")
@@ -112,30 +36,39 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 def test_settings():
-    """Override settings for testing."""
+    """Override settings for testing using SQLite in-memory DB."""
+    db_url = "sqlite+aiosqlite:///:memory:"
+    # Tell app lifespan to skip real DB init
+    os.environ["NOTEMESH_SKIP_LIFESPAN_DB"] = "1"
     return Settings(
-        database_url=TEST_DATABASE_URL,
+        database_url=db_url,
         secret_key="test-secret-key",
         debug=True,
-        redis_url="redis://localhost:6379/15",  # Use different Redis DB for tests
+        redis_url=os.getenv("TEST_REDIS_URL", "redis://localhost:6379/15"),
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def test_engine(test_settings):
-    """Create a fresh test database engine per test for isolation."""
+    """Create a shared SQLite in-memory engine for the test session."""
     engine = create_async_engine(
-        TEST_DATABASE_URL,
-        # Use a single in-memory connection shared across the async engine
-        poolclass=StaticPool,
+        test_settings.database_url,
         echo=False,
+        poolclass=StaticPool,  # keep the same memory DB across connections
+        connect_args={"check_same_thread": False},
     )
 
-    # Create tables
+    # Ensure SQLite enforces foreign key constraints (required for CASCADE/SET NULL)
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):  # noqa: ANN001
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+        finally:
+            cursor.close()
+
+    # Create tables once per session (we'll drop/create per test session fixture)
     async with engine.begin() as conn:
-        # Ensure all model modules are imported so tables are registered
-        # before calling create_all on the metadata. Without these imports,
-        # the metadata may be empty and tables won't be created.
         from src.notemesh.core.models import (
             user as _m_user,
             note as _m_note,
@@ -148,7 +81,6 @@ async def test_engine(test_settings):
     try:
         yield engine
     finally:
-        # Clean up
         await engine.dispose()
 
 
@@ -159,34 +91,114 @@ class EagerAsyncSession(AsyncSession):
     during refresh() so later attribute access doesn't trigger implicit IO.
     """
 
-    async def refresh(self, instance, attribute_names=None, with_for_update=None, identity_token=None):
-        # If caller didn't specify which attributes to refresh, include relationships too
-        if attribute_names is None:
+    async def get(
+        self,
+        entity,
+        ident,
+        *,
+        options=None,
+        populate_existing: bool = False,  # noqa: ARG002 - kept for signature compatibility
+        with_for_update=None,  # noqa: ARG002 - not used here
+        identity_token=None,  # noqa: ARG002 - not used here
+        execution_options=None,
+    ):
+        """Fetch by primary key via explicit SELECT to avoid identity-map refreshes.
+
+        Rationale: After DB-level cascades (e.g., ON DELETE CASCADE), the identity map
+        may still contain an expired instance. The default .get() could try to refresh
+        that instance and trigger unexpected IO paths leading to MissingGreenlet in
+        async tests. We bypass that by always issuing a direct SELECT and returning
+        the first row (or None).
+        """
+        stmt = select(entity).where(getattr(entity, "id") == ident)
+        # Always populate existing identity map objects with fresh DB values
+        # so that DB-level cascades (e.g., SET NULL) are visible immediately.
+        stmt = stmt.execution_options(populate_existing=True)
+        if options:
+            stmt = stmt.options(*options)
+        result = await self.execute(stmt, execution_options=execution_options or {})
+        return result.scalars().first()
+
+    async def refresh(self, instance, attribute_names=None, with_for_update=None):
+        """Refresh the given instance, then proactively refresh relationships.
+
+        - First refresh scalar/column state (or requested attributes) using the
+          normal AsyncSession.refresh.
+        - If no explicit attribute_names were provided, iterate the mapped
+          relationships and refresh each one explicitly so that subsequent
+          attribute access doesn't attempt an implicit (lazy) load.
+        """
+        # Always refresh the base state first
+        await super().refresh(
+            instance,
+            attribute_names=attribute_names,
+            with_for_update=with_for_update,
+        )
+
+        # If caller didn't request specific attributes, also proactively load
+        # ALL relationship attributes via a dedicated SELECT with selectinload
+        # so that later attribute access doesn't attempt implicit async IO.
+        # Use a simple re-entrancy guard to avoid nested calls when refresh()
+        # itself was invoked by a higher-level loader (e.g. inside get()).
+        if attribute_names is None and not getattr(self, "_in_preload_refresh", False):
             try:
-                rel_names = list(instance.__mapper__.relationships.keys())
+                self._in_preload_refresh = True
+                mapper = instance.__mapper__
+                rels = list(mapper.relationships)
+                if not rels:
+                    return
+
+                # Build loader options to eager-load each relationship
+                loaders = [
+                    selectinload(getattr(instance.__class__, rel.key)) for rel in rels
+                ]
+
+                # Figure out primary key identity; assume single-column PK (BaseModel.id)
+                identity = getattr(instance, "id", None)
+                if identity is None:
+                    return
+
+                # Load a fresh copy with relationships populated using an explicit SELECT
+                stmt = (
+                    select(instance.__class__)
+                    .options(*loaders)
+                    .where(getattr(instance.__class__, "id") == identity)
+                )
+                result = await self.execute(stmt)
+                loaded = result.scalars().first()
+                if not loaded:
+                    return
+
+                # Copy loaded relationship values into the original instance state
+                for rel in rels:
+                    try:
+                        value = getattr(loaded, rel.key)
+                        orm_attributes.set_committed_value(instance, rel.key, value)
+                    except Exception:
+                        # Best effort; continue on any individual relationship failure
+                        continue
             except Exception:
-                rel_names = []
-            # Refresh scalar state first
-                await super().refresh(instance, attribute_names=None, with_for_update=with_for_update)
-            # Then refresh relationships explicitly within the async context
-            for rel_name in rel_names:
-                try:
-                        await super().refresh(instance, attribute_names=[rel_name], with_for_update=with_for_update)
-                except Exception:
-                    # Ignore if relationship can't be refreshed (e.g., not persisted yet)
-                    pass
-        else:
-                await super().refresh(instance, attribute_names=attribute_names, with_for_update=with_for_update)
+                # If any unexpected error occurs, fall back silently
+                return
+            finally:
+                self._in_preload_refresh = False
 
 
 @pytest.fixture
 async def test_session(test_engine):
-    """Create a test database session."""
+    """Create a clean test database session per test (drop/create all)."""
     async_session_maker = sessionmaker(
         test_engine,
         class_=EagerAsyncSession,
+        # Avoid implicit attribute refreshes after commit which can cause
+        # MissingGreenlet when accessed in sync contexts during async tests.
         expire_on_commit=False,
     )
+
+    # Ensure a clean schema for each test to avoid unique collisions
+    async with test_engine.begin() as conn:
+        await conn.run_sync(BaseModel.metadata.drop_all)
+        await conn.run_sync(BaseModel.metadata.create_all)
 
     async with async_session_maker() as session:
         try:
@@ -288,7 +300,7 @@ async def test_note(test_session, test_user, test_note_data):
         title=test_note_data["title"],
         content=test_note_data["content"],
         is_pinned=test_note_data["is_pinned"],
-        user_id=test_user.id,
+        owner_id=test_user.id,
     )
     
     # Add tags

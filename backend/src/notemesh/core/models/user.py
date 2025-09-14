@@ -9,6 +9,7 @@ from sqlalchemy import Boolean, String, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
+from .types import GUID
 
 if TYPE_CHECKING:
     from .note import Note
@@ -30,12 +31,33 @@ class User(BaseModel):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relations
-    notes: Mapped[List["Note"]] = relationship("Note", back_populates="owner", cascade="all, delete-orphan")
+    notes: Mapped[List["Note"]] = relationship(
+        "Note",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
-    shares_given: Mapped[List["Share"]] = relationship("Share", foreign_keys="Share.shared_by_user_id", back_populates="shared_by_user", cascade="all, delete-orphan")
-    shares_received: Mapped[List["Share"]] = relationship("Share", foreign_keys="Share.shared_with_user_id", back_populates="shared_with_user")
+    shares_given: Mapped[List["Share"]] = relationship(
+        "Share",
+        foreign_keys="Share.shared_by_user_id",
+        back_populates="shared_by_user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    shares_received: Mapped[List["Share"]] = relationship(
+        "Share",
+        foreign_keys="Share.shared_with_user_id",
+        back_populates="shared_with_user",
+        lazy="selectin",
+    )
 
-    refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
+        "RefreshToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     __table_args__ = (
         # Enforce max lengths at DB level (SQLite compatible)
