@@ -19,26 +19,48 @@ class DummySettings:
     access_token_expire_minutes = 30
 
 
-def test_create_and_decode_access_token(monkeypatch):
+async def test_create_and_decode_access_token(monkeypatch):
     # Patch settings to deterministic values
     from src.notemesh.security import jwt as jwt_module
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
 
+    # Mock Redis client
+    async def mock_get_redis_client():
+        class MockRedis:
+            async def connect(self):
+                pass
+            async def is_token_blacklisted(self, jti):
+                return False
+        return MockRedis()
+
+    monkeypatch.setattr(jwt_module, "get_redis_client", mock_get_redis_client)
+
     sub = str(uuid.uuid4())
     token = create_access_token({"sub": sub}, expires_delta=timedelta(minutes=5))
     assert isinstance(token, str)
 
-    payload = decode_access_token(token)
+    payload = await decode_access_token(token)
     assert payload is not None
     assert payload.get("sub") == sub
     assert payload.get("type") == "access"
 
 
-def test_decode_access_token_invalid_signature(monkeypatch):
+async def test_decode_access_token_invalid_signature(monkeypatch):
     from src.notemesh.security import jwt as jwt_module
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
+
+    # Mock Redis client
+    async def mock_get_redis_client():
+        class MockRedis:
+            async def connect(self):
+                pass
+            async def is_token_blacklisted(self, jti):
+                return False
+        return MockRedis()
+
+    monkeypatch.setattr(jwt_module, "get_redis_client", mock_get_redis_client)
 
     # Create token with different secret to simulate invalid signature
     other_secret = "wrong-secret"
@@ -47,27 +69,49 @@ def test_decode_access_token_invalid_signature(monkeypatch):
         {"sub": sub, "type": "access"}, other_secret, algorithm=DummySettings.algorithm
     )
 
-    assert decode_access_token(token) is None
+    assert await decode_access_token(token) is None
 
 
-def test_get_user_id_from_token(monkeypatch):
+async def test_get_user_id_from_token(monkeypatch):
     from src.notemesh.security import jwt as jwt_module
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
+
+    # Mock Redis client
+    async def mock_get_redis_client():
+        class MockRedis:
+            async def connect(self):
+                pass
+            async def is_token_blacklisted(self, jti):
+                return False
+        return MockRedis()
+
+    monkeypatch.setattr(jwt_module, "get_redis_client", mock_get_redis_client)
 
     sub = str(uuid.uuid4())
     token = create_access_token({"sub": sub})
-    uid = get_user_id_from_token(token)
+    uid = await get_user_id_from_token(token)
     assert str(uid) == sub
 
 
-def test_get_user_id_from_token_invalid_payload(monkeypatch):
+async def test_get_user_id_from_token_invalid_payload(monkeypatch):
     from src.notemesh.security import jwt as jwt_module
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
 
+    # Mock Redis client
+    async def mock_get_redis_client():
+        class MockRedis:
+            async def connect(self):
+                pass
+            async def is_token_blacklisted(self, jti):
+                return False
+        return MockRedis()
+
+    monkeypatch.setattr(jwt_module, "get_redis_client", mock_get_redis_client)
+
     token = create_access_token({})
-    assert get_user_id_from_token(token) is None
+    assert await get_user_id_from_token(token) is None
 
 
 def test_create_refresh_token():

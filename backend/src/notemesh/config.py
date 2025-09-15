@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     database_echo: bool = Field(default=False)  # useful for debugging
 
     # Redis
-    redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
+    redis_url: str = Field(default="redis://:devpassword@localhost:6379/0", description="Redis connection URL")
     redis_max_connections: int = Field(default=10, description="Redis connection pool size")
 
     # JWT
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     cors_allow_credentials: bool = Field(default=True, description="CORS allow credentials")
 
     # Pagination
-    default_page_size: int = Field(default=20, description="Default pagination size")
+    default_page_size: int = Field(default=9, description="Default pagination size")
     max_page_size: int = Field(default=100, description="Maximum pagination size")
 
     # Rate limiting

@@ -28,7 +28,7 @@ async def create_note(
 @router.get("/", response_model=NoteListResponse)
 async def list_notes(
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    per_page: int = Query(9, ge=1, le=100),
     tags: Optional[List[str]] = Query(None),
     current_user_id: UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_db_session),

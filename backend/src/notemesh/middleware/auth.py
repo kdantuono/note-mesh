@@ -23,7 +23,7 @@ class JWTBearer(HTTPBearer):
                     status_code=status.HTTP_403_FORBIDDEN, detail="Invalid authentication scheme"
                 )
 
-            user_id = get_user_id_from_token(credentials.credentials)
+            user_id = await get_user_id_from_token(credentials.credentials)
             if not user_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token or expired token"

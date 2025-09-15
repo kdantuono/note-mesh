@@ -105,90 +105,118 @@ class TestJWTUtils:
         # Should have reasonable length (32 bytes base64 encoded)
         assert len(token1) > 20
 
-    def test_decode_access_token_valid(self, mock_settings):
+    async def test_decode_access_token_valid(self, mock_settings):
         """Test decoding valid access token."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client") as mock_redis:
+            # Mock Redis client to avoid connection issues
+            mock_redis_instance = mock_redis.return_value
+            mock_redis_instance.connect.return_value = None
+            mock_redis_instance.is_token_blacklisted.return_value = False
+
             user_id = str(uuid4())
             data = {"sub": user_id}
             token = create_access_token(data)
 
-            decoded = decode_access_token(token)
+            decoded = await decode_access_token(token)
 
             assert decoded is not None
             assert decoded["sub"] == user_id
             assert decoded["type"] == "access"
 
-    def test_decode_access_token_invalid(self, mock_settings):
+    async def test_decode_access_token_invalid(self, mock_settings):
         """Test decoding invalid access token."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client"):
             # Invalid token
-            assert decode_access_token("invalid.token.here") is None
+            assert await decode_access_token("invalid.token.here") is None
 
             # Empty token
-            assert decode_access_token("") is None
+            assert await decode_access_token("") is None
 
-    def test_decode_access_token_wrong_type(self, mock_settings):
+    async def test_decode_access_token_wrong_type(self, mock_settings):
         """Test decoding token with wrong type."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client"):
             # Create token with wrong type
             data = {"sub": str(uuid4()), "type": "refresh"}
             token = jwt.encode(data, mock_settings.secret_key, algorithm=mock_settings.algorithm)
 
-            assert decode_access_token(token) is None
+            assert await decode_access_token(token) is None
 
-    def test_decode_access_token_expired(self, mock_settings):
+    async def test_decode_access_token_expired(self, mock_settings):
         """Test decoding expired access token."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client"):
             user_id = str(uuid4())
             data = {"sub": user_id}
             # Create token that expires immediately
             token = create_access_token(data, expires_delta=timedelta(seconds=-1))
 
-            assert decode_access_token(token) is None
+            assert await decode_access_token(token) is None
 
-    def test_decode_access_token_wrong_secret(self, mock_settings):
+    async def test_decode_access_token_wrong_secret(self, mock_settings):
         """Test decoding token with wrong secret."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client"):
             user_id = str(uuid4())
             data = {"sub": user_id, "type": "access"}
 
             # Create token with different secret
             token = jwt.encode(data, "wrong-secret-key", algorithm=mock_settings.algorithm)
 
-            assert decode_access_token(token) is None
+            assert await decode_access_token(token) is None
 
-    def test_get_user_id_from_token_valid(self, mock_settings):
+    async def test_get_user_id_from_token_valid(self, mock_settings):
         """Test extracting user ID from valid token."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client") as mock_redis:
+            # Mock Redis client to avoid connection issues
+            mock_redis_instance = mock_redis.return_value
+            mock_redis_instance.connect.return_value = None
+            mock_redis_instance.is_token_blacklisted.return_value = False
+
             user_id = uuid4()
             data = {"sub": str(user_id)}
             token = create_access_token(data)
 
-            extracted_id = get_user_id_from_token(token)
+            extracted_id = await get_user_id_from_token(token)
 
             assert extracted_id == user_id
             assert isinstance(extracted_id, UUID)
 
-    def test_get_user_id_from_token_invalid(self, mock_settings):
+    async def test_get_user_id_from_token_invalid(self, mock_settings):
         """Test extracting user ID from invalid token."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client") as mock_redis:
+            # Mock Redis client to avoid connection issues
+            mock_redis_instance = mock_redis.return_value
+            mock_redis_instance.connect.return_value = None
+            mock_redis_instance.is_token_blacklisted.return_value = False
+
             # Invalid token
-            assert get_user_id_from_token("invalid.token") is None
+            assert await get_user_id_from_token("invalid.token") is None
 
             # Token without sub claim
             data = {"username": "testuser"}
             token = create_access_token(data)
-            assert get_user_id_from_token(token) is None
+            assert await get_user_id_from_token(token) is None
 
             # Token with invalid UUID
             data = {"sub": "not-a-uuid"}
             token = create_access_token(data)
-            assert get_user_id_from_token(token) is None
+            assert await get_user_id_from_token(token) is None
 
-    def test_get_user_id_from_token_non_uuid_sub(self, mock_settings):
+    async def test_get_user_id_from_token_non_uuid_sub(self, mock_settings):
         """Test extracting user ID when sub is not a valid UUID."""
-        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings):
+        with patch("src.notemesh.security.jwt.get_settings", return_value=mock_settings), \
+             patch("src.notemesh.security.jwt.get_redis_client") as mock_redis:
+            # Mock Redis client to avoid connection issues
+            mock_redis_instance = mock_redis.return_value
+            mock_redis_instance.connect.return_value = None
+            mock_redis_instance.is_token_blacklisted.return_value = False
+
             data = {"sub": "12345"}  # Not a valid UUID
             token = create_access_token(data)
 
-            assert get_user_id_from_token(token) is None
+            assert await get_user_id_from_token(token) is None
