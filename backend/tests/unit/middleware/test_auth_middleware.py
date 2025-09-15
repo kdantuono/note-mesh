@@ -3,7 +3,6 @@
 import uuid
 from typing import Optional
 
-import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 

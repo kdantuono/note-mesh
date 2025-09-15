@@ -14,6 +14,38 @@ body {
     background-color: #f8f9fa;
 }
 
+/* Accessibility - Skip Link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: #3498db;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 0 0 4px 4px;
+    z-index: 9999;
+    font-weight: bold;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Accessibility - Focus styles */
+:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+/* Accessibility - Error messages */
+.error-message {
+    color: #e74c3c;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    min-height: 1.2rem;
+}
+
 /* Utility Classes */
 .hidden {
     display: none !important;
@@ -961,6 +993,17 @@ body {
     }
 }
 
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.02);
+        opacity: 0.9;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-toggle {
@@ -1066,42 +1109,25 @@ body {
     }
 }
 
-/* Share Users in Note Editor */
-.share-users-container {
-    display: flex;
-    gap: 1rem;
-    align-items: end;
+/* Share Users in Note Editor - Simplified */
+.share-input-container {
     margin-bottom: 1rem;
 }
 
-.share-users-container input {
-    flex: 1;
-    margin-bottom: 0;
-}
-
-.permission-selector {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-}
-
-.permission-selector label {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.permission-selector select {
+.share-input-container input {
+    width: 100%;
     padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background: white;
+    font-size: 1rem;
 }
 
-.shared-users-list {
+.shared-users-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 1rem;
+    min-height: 30px;
+    margin-bottom: 1rem;
 }
 
 .shared-user-tag {
@@ -1189,4 +1215,122 @@ body {
 
 .existing-share-tag .revoke-share:hover {
     color: #d32f2f;
+}
+
+/* Media content in notes */
+.media-container {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.embedded-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 0.5rem;
+}
+
+.embedded-video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.embedded-audio {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.media-link {
+    display: inline-block;
+    font-size: 0.875rem;
+    color: #666;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.media-link:hover {
+    color: #3498db;
+    text-decoration: underline;
+}
+
+.external-link {
+    color: #3498db;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.external-link:hover {
+    text-decoration: underline;
+}
+
+/* Note content area */
+.note-content {
+    line-height: 1.8;
+    word-wrap: break-word;
+}
+
+.note-content img,
+.note-content video,
+.note-content audio {
+    max-width: 100%;
+}
+
+/* Note card sharing status */
+.note-sharing-status {
+    margin-top: 0.5rem;
+}
+
+.sharing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.sharing-badge.private {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #e9ecef;
+}
+
+.sharing-badge.owned {
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #2196f3;
+}
+
+.sharing-badge.shared-with-me {
+    background: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #4caf50;
+}
+
+.sharing-badge.shared-by-me {
+    background: #fff3e0;
+    color: #f57c00;
+    border: 1px solid #ff9800;
+}
+
+/* Note card accessibility improvements */
+.note-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-card:hover,
+.note-card:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+.owner-info strong {
+    color: #2c3e50;
 }

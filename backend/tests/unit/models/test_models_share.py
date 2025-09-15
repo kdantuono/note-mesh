@@ -2,7 +2,6 @@
 Unit tests for Share model.
 """
 
-import uuid
 from datetime import datetime, timedelta
 
 import pytest

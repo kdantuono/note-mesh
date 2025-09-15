@@ -4,9 +4,7 @@ Unit tests for base model functionality.
 
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, Mock
-
-import pytest
+from unittest.mock import Mock
 
 from src.notemesh.core.models.base import BaseModel
 

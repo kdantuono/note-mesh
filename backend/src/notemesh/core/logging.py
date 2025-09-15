@@ -1,13 +1,14 @@
 """
 Comprehensive logging configuration for NoteMesh backend.
 """
+
 import json
 import logging
 import logging.config
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from ..config import get_settings
 
@@ -111,7 +112,8 @@ def setup_logging() -> None:
     settings = get_settings()
 
     # Create logs directory if it doesn't exist
-    log_dir = Path("logs")
+    # Use /app/logs for Docker or logs/ for local development
+    log_dir = Path("/app/logs") if Path("/app").exists() else Path("logs")
     log_dir.mkdir(exist_ok=True)
 
     # Configure logging
@@ -232,9 +234,9 @@ class LoggingMiddleware:
                 "method": scope["method"],
                 "path": scope["path"],
                 "query_string": scope.get("query_string", b"").decode(),
-                "client_ip": scope.get("client", ["unknown"])[0]
-                if scope.get("client")
-                else "unknown",
+                "client_ip": (
+                    scope.get("client", ["unknown"])[0] if scope.get("client") else "unknown"
+                ),
                 "user_agent": next(
                     (h[1].decode() for h in scope.get("headers", []) if h[0] == b"user-agent"),
                     "unknown",

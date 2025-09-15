@@ -7,11 +7,12 @@ including permission management and shared note access.
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-from .common import PaginationResponse
+if TYPE_CHECKING:
+    from .notes import NoteListItem
 
 
 class ShareRequest(BaseModel):
@@ -19,7 +20,7 @@ class ShareRequest(BaseModel):
 
     note_id: uuid.UUID = Field(description="Note ID to share")
     shared_with_usernames: List[str] = Field(
-        min_items=1, max_items=20, description="Usernames of users to share with"
+        min_length=1, max_length=20, description="Usernames of users to share with"
     )
     permission_level: str = Field(default="read", description="Permission level (read or write)")
     message: Optional[str] = Field(
@@ -70,6 +71,9 @@ class ShareResponse(BaseModel):
     shared_with_display_name: str = Field(description="Display name of user who received the share")
     permission_level: str = Field(description="Permission level granted")
     message: Optional[str] = Field(description="Message included with share")
+
+    # Complete note data for dashboard display
+    note: Optional["NoteListItem"] = Field(description="Complete note data with tags and owner info", default=None)
 
     # Timestamps
     shared_at: datetime = Field(description="When the note was shared")
@@ -226,3 +230,7 @@ class ShareStatsResponse(BaseModel):
         json_schema_extra = {
             "example": {"shares_given": 15, "shares_received": 8, "unique_notes_shared": 10}
         }
+
+
+# Note: Forward references will be resolved when all modules are loaded
+# See __init__.py for the model_rebuild() call

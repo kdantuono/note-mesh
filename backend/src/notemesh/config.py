@@ -3,8 +3,6 @@ App configuration - using pydantic settings for env vars
 TODO: might need to split this if it gets too big
 """
 
-from typing import Optional
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

@@ -132,6 +132,7 @@ class NoteResponse(BaseModel):
     # Ownership and sharing info
     owner_id: uuid.UUID = Field(description="Note owner ID")
     owner_username: Optional[str] = Field(description="Note owner username")
+    owner_display_name: Optional[str] = Field(description="Note owner display name")
     is_shared: bool = Field(description="Whether note is shared with current user")
     can_edit: bool = Field(description="Whether current user can edit this note")
 
@@ -142,6 +143,9 @@ class NoteResponse(BaseModel):
     # Statistics (TODO: implement in service layer)
     view_count: Optional[int] = Field(default=0, description="Number of views")
     share_count: Optional[int] = Field(default=0, description="Number of shares")
+
+    # Sharing information for note detail view (only populated for owned notes)
+    sharing_info: Optional[Dict[str, Any]] = Field(default=None, description="Detailed sharing information")
 
     class Config:
         from_attributes = True
@@ -176,9 +180,13 @@ class NoteListItem(BaseModel):
     # Ownership and sharing info
     owner_id: uuid.UUID = Field(description="Note owner ID")
     owner_username: Optional[str] = Field(description="Note owner username")
+    owner_display_name: Optional[str] = Field(description="Note owner display name")
     is_shared: bool = Field(description="Whether note is shared with current user")
     is_owned: bool = Field(description="Whether current user owns this note")
     can_edit: bool = Field(description="Whether current user can edit this note")
+    # Sharing status for owned notes
+    is_shared_by_user: bool = Field(default=False, description="Whether user has shared this note with others")
+    share_count: int = Field(default=0, description="Number of people this note is shared with")
 
     # Timestamps
     created_at: datetime = Field(description="Creation timestamp")

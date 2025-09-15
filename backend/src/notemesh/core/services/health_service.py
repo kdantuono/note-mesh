@@ -39,21 +39,23 @@ class HealthService(IHealthService):
     async def check_database_health(self) -> Dict[str, Any]:
         """Check DB connection."""
         try:
-            # Simple query to test connection
+            # Measure response time
+            start_time = asyncio.get_event_loop().time()
             result = await self.session.execute(text("SELECT 1"))
             result.scalar()
+            response_time = (asyncio.get_event_loop().time() - start_time) * 1000
 
             return {
                 "connected": True,
                 "status": "healthy",
-                "response_time_ms": None,  # Could be measured
+                "response_time_ms": round(response_time, 2),
             }
         except Exception as e:
             return {
                 "connected": False,
                 "status": "unhealthy",
                 "error": str(e),
-                "response_time_ms": None,
+                "response_time_ms": 0.0,
             }
 
     async def check_redis_health(self) -> Dict[str, Any]:

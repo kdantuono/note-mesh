@@ -1,5 +1,4 @@
 # Basic tests
-import pytest
 from fastapi.testclient import TestClient
 
 from src.notemesh.main import app
@@ -24,9 +23,6 @@ def test_health_endpoint():
 def test_models_import():
     """Test that models can be imported."""
     from src.notemesh.core.models.note import Note
-    from src.notemesh.core.models.refresh_token import RefreshToken
-    from src.notemesh.core.models.share import Share
-    from src.notemesh.core.models.tag import Tag
     from src.notemesh.core.models.user import User
 
     # basic instantiation test

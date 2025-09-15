@@ -96,18 +96,60 @@ class ApiClient {
 
     // Handle API response
     async handleResponse(response) {
+        // For successful responses with no content (like 204 No Content), return null
+        if (response.ok && (response.status === 204 || response.status === 205)) {
+            return null;
+        }
+
         const contentType = response.headers.get('content-type');
         const isJson = contentType && contentType.includes('application/json');
 
         let data = null;
-        if (isJson) {
-            data = await response.json();
+
+        // Check if there's actually content to read
+        const contentLength = response.headers.get('content-length');
+        if (contentLength === '0') {
+            data = null;
         } else {
-            data = await response.text();
+            try {
+                if (isJson) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    data = text || null;
+                }
+            } catch (parseError) {
+                console.warn('Failed to parse response:', parseError);
+                data = null;
+            }
         }
 
         if (!response.ok) {
-            const errorMessage = data?.detail || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+            if (data) {
+                if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data.detail) {
+                    if (typeof data.detail === 'string') {
+                        errorMessage = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        // Handle Pydantic validation errors
+                        const validationErrors = data.detail.map(err => {
+                            const location = err.loc ? err.loc.join('.') : 'unknown';
+                            return `${location}: ${err.msg}`;
+                        }).join(', ');
+                        errorMessage = `Validation errors: ${validationErrors}`;
+                    } else {
+                        errorMessage = JSON.stringify(data.detail);
+                    }
+                } else if (data.message) {
+                    errorMessage = data.message;
+                } else {
+                    errorMessage = JSON.stringify(data);
+                }
+            }
+
             throw new Error(errorMessage);
         }
 
@@ -191,7 +233,23 @@ class ApiClient {
     }
 
     async getNote(noteId) {
-        return await this.makeRequest(ENDPOINTS.NOTE_BY_ID(noteId));
+        try {
+            return await this.makeRequest(ENDPOINTS.NOTE_BY_ID(noteId));
+        } catch (error) {
+            // Fallback: if note not found, try shared note endpoint (for recipients)
+            const msg = (error?.message || '').toLowerCase();
+            if (msg.includes('not found') || msg.includes('404')) {
+                try {
+                    const shared = await this.getSharedNote(noteId);
+                    if (shared) {
+                        return this._mapSharedNoteToRegular(shared);
+                    }
+                } catch (e) {
+                    // Re-throw original error if fallback fails too
+                }
+            }
+            throw error;
+        }
     }
 
     async createNote(noteData) {
@@ -209,6 +267,12 @@ class ApiClient {
     }
 
     async deleteNote(noteId) {
+        if (!noteId) {
+            throw new Error('Note ID is required for deletion');
+        }
+
+        console.log('Deleting note via API:', { noteId, endpoint: ENDPOINTS.NOTE_BY_ID(noteId) });
+
         return await this.makeRequest(ENDPOINTS.NOTE_BY_ID(noteId), {
             method: 'DELETE'
         });
@@ -241,14 +305,81 @@ class ApiClient {
 
     // Sharing API calls
     async shareNote(noteId, username, permission = 'read') {
-        return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
-            method: 'POST',
-            body: JSON.stringify({
-                note_id: noteId,
-                shared_with_username: username,
-                permission: permission
-            })
-        });
+        const payload = {
+            note_id: noteId,
+            shared_with_usernames: [username], // Backend expects array
+            permission_level: permission // FIXED: was 'permission', should be 'permission_level'
+        };
+
+        console.log('Sharing payload (single user):', payload);
+
+        try {
+            return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            // Enhance error messages for sharing-specific problems
+            if (error.message.includes('500')) {
+                throw new Error(`Could not share with user "${username}". The user may not exist in the system, or there may be a server issue.`);
+            } else if (error.message.includes('404')) {
+                throw new Error('Note not found or you do not have permission to share it.');
+            } else if (error.message.includes('403')) {
+                throw new Error('You do not have permission to share this note.');
+            }
+            // Re-throw original error for other cases
+            throw error;
+        }
+    }
+
+    // Share note with multiple users in a single API call (more efficient)
+    async shareNoteWithUsers(noteId, usernames, permission = 'read') {
+        // Validate inputs
+        if (!noteId) {
+            throw new Error('Note ID is required');
+        }
+
+        if (!usernames || !Array.isArray(usernames) || usernames.length === 0) {
+            throw new Error('At least one username is required');
+        }
+
+        if (usernames.length > 20) {
+            throw new Error('Cannot share with more than 20 users at once');
+        }
+
+        if (!['read', 'write'].includes(permission)) {
+            throw new Error('Permission level must be "read" or "write"');
+        }
+
+        const payload = {
+            note_id: noteId,
+            shared_with_usernames: usernames, // Array of usernames
+            permission_level: permission
+        };
+
+        console.log('Sharing payload (multiple users):', payload);
+
+        try {
+            return await this.makeRequest(ENDPOINTS.SHARE_NOTE, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            // Enhance error messages for sharing-specific problems
+            if (error.message.includes('500')) {
+                if (usernames.length === 1) {
+                    throw new Error(`Could not share with user "${usernames[0]}". The user may not exist in the system, or there may be a server issue.`);
+                } else {
+                    throw new Error(`Could not share with one or more users: ${usernames.join(', ')}. Some users may not exist in the system, or there may be a server issue.`);
+                }
+            } else if (error.message.includes('404')) {
+                throw new Error('Note not found or you do not have permission to share it.');
+            } else if (error.message.includes('403')) {
+                throw new Error('You do not have permission to share this note.');
+            }
+            // Re-throw original error for other cases
+            throw error;
+        }
     }
 
     // Get shares (both given and received)
@@ -280,6 +411,26 @@ class ApiClient {
     // Get shared note (for recipients)
     async getSharedNote(noteId) {
         return await this.makeRequest(ENDPOINTS.SHARED_NOTE(noteId));
+    }
+
+    // Map SharedNoteResponse to a NoteResponse-like object used across the app
+    _mapSharedNoteToRegular(shared) {
+        return {
+            id: shared.id,
+            title: shared.title,
+            content: shared.content,
+            tags: shared.tags || [],
+            hyperlinks: shared.hyperlinks || [],
+            is_public: false,
+            owner_id: shared.owner_id,
+            owner_username: shared.owner_username,
+            is_shared: true,
+            can_edit: !!shared.can_write,
+            created_at: shared.created_at,
+            updated_at: shared.updated_at,
+            view_count: 0,
+            share_count: 0
+        };
     }
 
     // Health check

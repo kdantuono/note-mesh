@@ -27,7 +27,9 @@ async def verify_postgres():
         print(f"❌ DATABASE_URL deve essere PostgreSQL, trovato: {database_url}")
         return False
 
-    print(f"📌 Connessione a: {database_url.split('@')[1] if '@' in database_url else database_url}")
+    print(
+        f"📌 Connessione a: {database_url.split('@')[1] if '@' in database_url else database_url}"
+    )
 
     try:
         # Create async engine
@@ -44,9 +46,9 @@ async def verify_postgres():
             result = await conn.execute(
                 text(
                     """
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
                 AND table_type = 'BASE TABLE'
                 ORDER BY table_name
             """
@@ -82,9 +84,9 @@ async def verify_postgres():
                 result = await conn.execute(
                     text(
                         """
-                    SELECT column_name, data_type 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'users' 
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_name = 'users'
                     AND column_name IN ('id', 'username', 'created_at')
                     ORDER BY ordinal_position
                 """
@@ -98,9 +100,9 @@ async def verify_postgres():
             result = await conn.execute(
                 text(
                     """
-                SELECT COUNT(*) 
-                FROM pg_indexes 
-                WHERE schemaname = 'public' 
+                SELECT COUNT(*)
+                FROM pg_indexes
+                WHERE schemaname = 'public'
                 AND tablename != 'alembic_version'
             """
                 )
@@ -112,9 +114,9 @@ async def verify_postgres():
             result = await conn.execute(
                 text(
                     """
-                SELECT COUNT(*) 
-                FROM information_schema.table_constraints 
-                WHERE constraint_schema = 'public' 
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE constraint_schema = 'public'
                 AND constraint_type = 'FOREIGN KEY'
             """
                 )

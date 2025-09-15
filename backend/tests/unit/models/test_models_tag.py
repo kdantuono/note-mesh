@@ -175,7 +175,7 @@ class TestTagModel:
         note.tags.append(tag)
         await test_session.commit()
 
-        tag_id = tag.id
+        tag.id
         note_id = note.id
 
         # Delete tag

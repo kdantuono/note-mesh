@@ -1,7 +1,7 @@
 """Unit tests for AuthService (src/notemesh/core/services/auth_service.py)."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 

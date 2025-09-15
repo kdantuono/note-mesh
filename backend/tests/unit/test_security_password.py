@@ -2,8 +2,6 @@
 Unit tests for password hashing utilities.
 """
 
-import pytest
-
 from src.notemesh.security.password import hash_password, needs_update, verify_password
 
 

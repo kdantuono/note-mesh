@@ -9,7 +9,6 @@ from sqlalchemy import Boolean, CheckConstraint, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
-from .types import GUID
 
 if TYPE_CHECKING:
     from .note import Note

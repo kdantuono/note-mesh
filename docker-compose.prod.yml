@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 
 services:
   # PostgreSQL database for production
@@ -39,7 +39,7 @@ services:
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -89,7 +89,7 @@ services:
         gunicorn notemesh.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level info
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 60s
       timeout: 30s
       retries: 3
@@ -121,7 +121,7 @@ services:
     environment:
       - API_BASE_URL=${API_BASE_URL:-http://backend:8000}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 60s
       timeout: 30s
       retries: 3
@@ -154,7 +154,7 @@ services:
     environment:
       - DOMAIN=${DOMAIN:-localhost}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 60s
       timeout: 30s
       retries: 3
@@ -178,6 +178,4 @@ volumes:
 networks:
   notemesh-prod:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.21.0.0/16
+    name: notemesh-prod-network

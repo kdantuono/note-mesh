@@ -30,8 +30,28 @@ class NotesManager {
                 try {
                     const sharedWithMe = await apiClient.getSharedWithMe(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedWithMe && sharedWithMe.shares && Array.isArray(sharedWithMe.shares)) {
-                        // Backend returns 'shares' array, not 'items'
-                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedWithMe.shares, NOTE_TYPES.SHARED_WITH_ME)];
+                        // Backend returns 'shares' array, extract note data properly
+                        const sharedNotes = sharedWithMe.shares.map(share => {
+                            // If share.note exists, use it; otherwise create note-like object from share data
+                            if (share.note) {
+                                return share.note;
+                            } else {
+                                // Fallback: create note-like object using share data
+                                return {
+                                    id: share.note_id, // Use note_id, not share.id
+                                    title: share.note_title || 'Unknown Note',
+                                    content: '', // We don't have content in share response
+                                    tags: [],
+                                    owner_id: share.shared_by_user_id || null,
+                                    owner_username: share.shared_by_username || null,
+                                    created_at: share.shared_at,
+                                    updated_at: share.shared_at,
+                                    is_shared: true,
+                                    can_edit: share.permission_level === 'write'
+                                };
+                            }
+                        });
+                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedNotes, NOTE_TYPES.SHARED_WITH_ME)];
                         notesData.total += sharedWithMe.total_count || 0;
                     }
                 } catch (error) {
@@ -40,12 +60,33 @@ class NotesManager {
                 }
             }
 
-            if (ownerFilter === 'all' || ownerFilter === 'shared_by_me') {
+            // Only load "shared by me" notes when explicitly requested (not for unified 'all' view)
+            if (ownerFilter === 'shared_by_me') {
                 try {
                     const sharedByMe = await apiClient.getMyShares(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedByMe && sharedByMe.shares && Array.isArray(sharedByMe.shares)) {
-                        // Backend returns 'shares' array, not 'items'
-                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedByMe.shares, NOTE_TYPES.SHARED_BY_ME)];
+                        // Backend returns 'shares' array, extract note data properly
+                        const sharedNotes = sharedByMe.shares.map(share => {
+                            // If share.note exists, use it; otherwise create note-like object from share data
+                            if (share.note) {
+                                return share.note;
+                            } else {
+                                // Fallback: create note-like object using share data
+                                return {
+                                    id: share.note_id, // Use note_id, not share.id
+                                    title: share.note_title || 'Unknown Note',
+                                    content: '', // We don't have content in share response
+                                    tags: [],
+                                    owner_id: share.shared_by_user_id || null,
+                                    owner_username: share.shared_by_username || null,
+                                    created_at: share.shared_at,
+                                    updated_at: share.shared_at,
+                                    is_shared: true,
+                                    can_edit: true // Owner can always edit their own notes
+                                };
+                            }
+                        });
+                        notesData.items = [...notesData.items, ...this.markNotesAsType(sharedNotes, NOTE_TYPES.SHARED_BY_ME)];
                         notesData.total += sharedByMe.total_count || 0;
                     }
                 } catch (error) {
@@ -98,43 +139,106 @@ class NotesManager {
         const notesHTML = this.currentNotes.map(note => this.createNoteCard(note)).join('');
         notesGrid.innerHTML = notesHTML;
 
-        // Set up note card click handlers
+        // Set up note card click and keyboard handlers
         notesGrid.querySelectorAll('.note-card').forEach(card => {
             card.addEventListener('click', () => {
                 const noteId = card.dataset.noteId;
                 this.showNoteDetail(noteId);
+            });
+
+            // Add keyboard navigation
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const noteId = card.dataset.noteId;
+                    this.showNoteDetail(noteId);
+                }
             });
         });
     }
 
     // Create HTML for a single note card
     createNoteCard(note) {
-        const preview = this.createContentPreview(note.content);
+        // Use content_preview if available (from NoteListItem), otherwise create preview from content
+        const preview = note.content_preview || this.createContentPreview(note.content);
         const tags = note.tags ? note.tags.slice(0, 3) : [];
         const remainingTags = note.tags ? Math.max(0, note.tags.length - 3) : 0;
 
         const typeClass = note.note_type || NOTE_TYPES.OWNED;
-        const typeLabel = this.getTypeLabel(typeClass);
+        const ownerInfo = this.getOwnerInfo(note, typeClass);
+        const sharingInfo = this.getSharingInfo(note, typeClass);
 
         return `
-            <div class="note-card ${typeClass}" data-note-id="${note.id}">
+            <div class="note-card ${typeClass}" data-note-id="${note.id}" tabindex="0" role="button" aria-label="Open note: ${this.escapeHtml(note.title)}">
                 <div class="note-card-header">
                     <div>
                         <h3 class="note-title">${this.escapeHtml(note.title)}</h3>
-                        <div class="note-type ${typeClass}">${typeLabel}</div>
+                        <div class="note-sharing-status">${sharingInfo}</div>
                     </div>
                 </div>
-                <div class="note-preview">${this.escapeHtml(preview)}</div>
+                <div class="note-preview">${preview}</div>
                 <div class="note-meta">
-                    <span><i class="fas fa-user"></i> ${this.escapeHtml(note.owner?.full_name || note.owner?.username || 'Unknown')}</span>
-                    <span><i class="fas fa-calendar"></i> ${this.formatDate(note.created_at)}</span>
+                    <span class="owner-info"><i class="fas fa-user" aria-hidden="true"></i> ${ownerInfo}</span>
+                    <span><i class="fas fa-calendar" aria-hidden="true"></i> ${this.formatDate(note.created_at)}</span>
                 </div>
-                <div class="note-tags">
-                    ${tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}
-                    ${remainingTags > 0 ? `<span class="tag">+${remainingTags} more</span>` : ''}
+                <div class="note-tags" role="list" aria-label="Tags">
+                    ${tags.map(tag => `<span class="tag" role="listitem">${this.escapeHtml(tag)}</span>`).join('')}
+                    ${remainingTags > 0 ? `<span class="tag" role="listitem">+${remainingTags} more</span>` : ''}
                 </div>
             </div>
         `;
+    }
+
+    // Check if current user owns the note
+    isUserOwner(note, currentUser) {
+        if (!currentUser) return false;
+
+        // Check multiple ways the note ownership can be determined
+        return (
+            note.is_owned === true ||
+            note.can_edit === true ||
+            (note.owner && note.owner.id === currentUser.id) ||
+            (note.owner_id === currentUser.id) ||
+            (note.owner?.username === currentUser.username)
+        );
+    }
+
+    // Get owner information for display
+    getOwnerInfo(note, typeClass) {
+        const currentUser = authManager.getCurrentUser();
+        const ownerName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username;
+
+        if (typeClass === NOTE_TYPES.OWNED || note.is_owned || this.isUserOwner(note, currentUser)) {
+            return '<strong>You</strong>';
+        } else if (ownerName) {
+            if (ownerName === currentUser?.username) {
+                return '<strong>You</strong>';
+            } else {
+                return this.escapeHtml(ownerName);
+            }
+        } else {
+            return 'Unknown';
+        }
+    }
+
+    // Get sharing status information
+    getSharingInfo(note, typeClass) {
+        const shareCount = note.share_count || 0;
+
+        switch (typeClass) {
+            case NOTE_TYPES.OWNED:
+                if (shareCount > 0) {
+                    return `<span class="sharing-badge owned"><i class="fas fa-share-alt" aria-hidden="true"></i> Shared with ${shareCount}</span>`;
+                } else {
+                    return '<span class="sharing-badge private"><i class="fas fa-lock" aria-hidden="true"></i> Private</span>';
+                }
+            case NOTE_TYPES.SHARED_WITH_ME:
+                return '<span class="sharing-badge shared-with-me"><i class="fas fa-share" aria-hidden="true"></i> Shared with you</span>';
+            case NOTE_TYPES.SHARED_BY_ME:
+                return '<span class="sharing-badge shared-by-me"><i class="fas fa-share-alt" aria-hidden="true"></i> Shared by you</span>';
+            default:
+                return '';
+        }
     }
 
     // Get type label for display
@@ -154,9 +258,25 @@ class NotesManager {
     // Create content preview
     createContentPreview(content) {
         if (!content) return '';
-        return content.length > CONFIG.MAX_CONTENT_PREVIEW
-            ? content.substring(0, CONFIG.MAX_CONTENT_PREVIEW) + '...'
-            : content;
+
+        // First create plain text preview for cards
+        const plainText = content.replace(/\n/g, ' ');
+        const preview = plainText.length > CONFIG.MAX_CONTENT_PREVIEW
+            ? plainText.substring(0, CONFIG.MAX_CONTENT_PREVIEW) + '...'
+            : plainText;
+
+        // Process the preview to show if it contains links/media
+        const hasLinks = /(https?:\/\/[^\s]+)/gi.test(content);
+        const hasMedia = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|ogg|mov|mp3|wav|m4a)$/gi.test(content);
+
+        let indicators = '';
+        if (hasMedia) {
+            indicators += '<i class="fas fa-image" title="Contains media" aria-hidden="true"></i> ';
+        } else if (hasLinks) {
+            indicators += '<i class="fas fa-link" title="Contains links" aria-hidden="true"></i> ';
+        }
+
+        return indicators + this.escapeHtml(preview);
     }
 
     // Render pagination
@@ -232,16 +352,43 @@ class NotesManager {
     // Render note detail view
     renderNoteDetail(note) {
         document.getElementById('noteTitle').textContent = note.title;
-        document.getElementById('noteContent').textContent = note.content;
+        document.getElementById('noteContent').innerHTML = this.processNoteContent(note.content);
 
         // Note meta information
-        const ownerName = note.owner?.full_name || note.owner?.username || 'Unknown';
+        const currentUser = authManager.getCurrentUser();
+        const isOwner = this.isUserOwner(note, currentUser);
         const createdDate = this.formatDate(note.created_at);
         const viewCount = note.view_count || 0;
 
-        document.getElementById('noteOwner').innerHTML = `<i class="fas fa-user"></i> ${this.escapeHtml(ownerName)}`;
-        document.getElementById('noteDate').innerHTML = `<i class="fas fa-calendar"></i> ${createdDate}`;
-        document.getElementById('noteViews').innerHTML = `<i class="fas fa-eye"></i> ${viewCount} views`;
+        // Owner information
+        let ownerInfo = '';
+        if (isOwner) {
+            ownerInfo = '<i class="fas fa-user" aria-hidden="true"></i> <strong>Owner: You</strong>';
+        } else {
+            const ownerName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username || 'Unknown';
+            ownerInfo = `<i class="fas fa-user" aria-hidden="true"></i> <strong>Owner:</strong> ${this.escapeHtml(ownerName)}`;
+        }
+
+        // Sharing information
+        let sharingInfo = '';
+        if (isOwner && note.share_count > 0) {
+            // Show detailed sharing information if available
+            if (note.sharing_info && note.sharing_info.shared_with && note.sharing_info.shared_with.length > 0) {
+                const sharedWithNames = note.sharing_info.shared_with
+                    .map(user => user.display_name || user.username)
+                    .join(', ');
+                sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${this.escapeHtml(sharedWithNames)}`;
+            } else {
+                sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${note.share_count} user(s)`;
+            }
+        } else if (!isOwner) {
+            const sharedByName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username || 'Unknown user';
+            sharingInfo = `<br><i class="fas fa-share" aria-hidden="true"></i> <strong>Shared by:</strong> ${this.escapeHtml(sharedByName)}`;
+        }
+
+        document.getElementById('noteOwner').innerHTML = ownerInfo + sharingInfo;
+        document.getElementById('noteDate').innerHTML = `<i class="fas fa-calendar" aria-hidden="true"></i> ${createdDate}`;
+        document.getElementById('noteViews').innerHTML = `<i class="fas fa-eye" aria-hidden="true"></i> ${viewCount} views`;
 
         // Tags
         const tagsContainer = document.getElementById('noteTags');
@@ -268,9 +415,6 @@ class NotesManager {
         }
 
         // Show/hide action buttons based on ownership
-        const currentUser = authManager.getCurrentUser();
-        const isOwner = note.owner && note.owner.id === currentUser?.id;
-
         document.getElementById('editNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
         document.getElementById('shareNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
         document.getElementById('deleteNoteBtn').style.display = isOwner ? 'inline-flex' : 'none';
@@ -313,16 +457,57 @@ class NotesManager {
         this.loadExistingShares(note.id);
     }
 
-    // Add user to share list
-    addUserToShareList(username, permission = 'read') {
-        // Check if user already exists
+    // Validate and add user to share list (read-only access only)
+    async validateAndAddUser(username) {
+        const currentUser = authManager.getCurrentUser();
+
+        if (username === currentUser?.username) {
+            showToast('You cannot share with yourself', TOAST_TYPES.WARNING);
+            return;
+        }
+
+        if (username.length < 3) {
+            showToast('Username must be at least 3 characters', TOAST_TYPES.ERROR);
+            return;
+        }
+
+        // Check if user already exists in the list
         const existingIndex = this.shareList.findIndex(user => user.username === username);
         if (existingIndex !== -1) {
-            this.shareList[existingIndex].permission = permission;
-        } else {
-            this.shareList.push({ username, permission });
+            showToast('User already added to share list', TOAST_TYPES.WARNING);
+            return;
         }
-        this.renderShareList();
+
+        // Validate user exists in the system by trying to share temporarily
+        try {
+            showSpinner(true);
+
+            // Create a dummy note to test if user exists
+            // In a real scenario, you'd have a dedicated user validation endpoint
+            // For now, we'll proceed with optimistic validation and let the API handle it
+
+            // Basic format validation
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                showToast('Username must be 3-20 characters (letters, numbers, underscore only)', TOAST_TYPES.ERROR);
+                return;
+            }
+
+            // Add user to share list with read-only permission
+            this.shareList.push({ username, permission: 'read' });
+            this.renderShareList();
+            showToast(`Added ${username} to share list (read-only access)`, TOAST_TYPES.SUCCESS);
+
+        } catch (error) {
+            console.error('User validation failed:', error);
+            showToast('User validation failed. Please check the username.', TOAST_TYPES.ERROR);
+        } finally {
+            showSpinner(false);
+        }
+    }
+
+    // Add user to share list (legacy method)
+    addUserToShareList(username) {
+        this.validateAndAddUser(username);
     }
 
     // Remove user from share list
@@ -333,17 +518,17 @@ class NotesManager {
 
     // Render share list
     renderShareList() {
-        const listElement = document.getElementById('sharedUsersList');
+        const listElement = document.getElementById('sharedUsersTags');
         if (this.shareList.length === 0) {
-            listElement.innerHTML = '';
+            listElement.innerHTML = '<span style="color: #666; font-style: italic;">No users selected for sharing</span>';
             return;
         }
 
         const html = this.shareList.map(user => `
             <div class="shared-user-tag">
-                <span>${user.username}</span>
-                <span class="permission">${user.permission}</span>
-                <button type="button" class="remove-user" onclick="notesManager.removeUserFromShareList('${user.username}')">
+                <span><strong>${user.username}</strong></span>
+                <span class="permission">read-only</span>
+                <button type="button" class="remove-user" onclick="notesManager.removeUserFromShareList('${user.username}')" title="Remove user">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -351,18 +536,46 @@ class NotesManager {
         listElement.innerHTML = html;
     }
 
-    // Share note with multiple users
+    // Share note with multiple users (read-only access)
     async shareNoteWithUsers(noteId, usersList) {
-        const promises = usersList.map(user =>
-            apiClient.shareNote(noteId, user.username, user.permission)
-        );
-
         try {
-            await Promise.all(promises);
-            showToast(`Note shared with ${usersList.length} user(s)`, TOAST_TYPES.SUCCESS);
+            // Validate inputs before making API call
+            if (!noteId) {
+                throw new Error('Note ID is required for sharing');
+            }
+
+            if (!usersList || usersList.length === 0) {
+                console.warn('No users in share list, skipping sharing');
+                return;
+            }
+
+            // Extract just the usernames for the API call
+            const usernames = usersList.map(user => user.username).filter(username => username && username.trim());
+
+            if (usernames.length === 0) {
+                throw new Error('No valid usernames found in share list');
+            }
+
+            console.log('Sharing note:', { noteId, usernames, usersList });
+
+            // Use the new batch sharing API
+            await apiClient.shareNoteWithUsers(noteId, usernames, 'read');
+
+            showToast(`Note shared with ${usersList.length} user(s) (read-only access)`, TOAST_TYPES.SUCCESS);
         } catch (error) {
-            console.error('Failed to share with some users:', error);
-            showToast('Note saved, but sharing failed for some users', TOAST_TYPES.WARNING);
+            console.error('Failed to share with users:', error);
+            console.error('Share data:', { noteId, usersList });
+
+            // Provide more helpful error messages
+            let errorMessage = 'Note saved, but sharing failed: ' + error.message;
+
+            if (error.message.includes('may not exist in the system')) {
+                errorMessage += '\n\nTip: Make sure the username is exactly correct and that the user has an account on this system.';
+            } else if (error.message.includes('server issue')) {
+                errorMessage += '\n\nTry again in a few moments. If the problem persists, contact support.';
+            }
+
+            showToast(errorMessage, TOAST_TYPES.WARNING);
         }
     }
 
@@ -464,8 +677,12 @@ class NotesManager {
             }
 
             // Handle sharing if users were selected
+            console.log('Share list after saving note:', this.shareList);
             if (this.shareList.length > 0 && savedNote?.id) {
+                console.log('Attempting to share note:', { noteId: savedNote.id, shareList: this.shareList });
                 await this.shareNoteWithUsers(savedNote.id, this.shareList);
+            } else {
+                console.log('No sharing needed:', { shareListLength: this.shareList.length, noteId: savedNote?.id });
             }
 
             this.showDashboard();
@@ -479,13 +696,24 @@ class NotesManager {
 
     // Handle note deletion
     async handleNoteDelete() {
-        if (!this.currentNote) return;
+        if (!this.currentNote) {
+            console.error('No current note to delete');
+            showToast('No note selected for deletion', TOAST_TYPES.ERROR);
+            return;
+        }
+
+        if (!this.currentNote.id) {
+            console.error('Current note has no ID:', this.currentNote);
+            showToast('Invalid note ID for deletion', TOAST_TYPES.ERROR);
+            return;
+        }
 
         if (!confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
             return;
         }
 
         try {
+            console.log('Deleting note:', { noteId: this.currentNote.id, noteTitle: this.currentNote.title });
             await apiClient.deleteNote(this.currentNote.id);
             showToast('Note deleted successfully', TOAST_TYPES.SUCCESS);
             this.showDashboard();
@@ -493,7 +721,19 @@ class NotesManager {
 
         } catch (error) {
             console.error('Failed to delete note:', error);
-            showToast(error.message || 'Failed to delete note', TOAST_TYPES.ERROR);
+            console.error('Note data:', this.currentNote);
+
+            // Handle specific backend errors
+            if (error.message && error.message.includes('StaleDataError')) {
+                showToast('Note deletion failed due to concurrent modifications. Please refresh and try again.', TOAST_TYPES.WARNING);
+                // Refresh the current view to show updated data
+                this.showDashboard();
+                this.loadNotes(1, this.currentFilters);
+            } else if (error.message && error.message.includes('500')) {
+                showToast('Server error occurred while deleting note. Please try again later.', TOAST_TYPES.ERROR);
+            } else {
+                showToast(error.message || 'Failed to delete note', TOAST_TYPES.ERROR);
+            }
         }
     }
 
@@ -527,8 +767,25 @@ class NotesManager {
 
             const searchResults = await apiClient.searchNotes(searchQuery || '*', filters);
 
-            // Process search results to match loadNotes format
-            this.currentNotes = this.markNotesAsType(searchResults.items || [], NOTE_TYPES.OWNED);
+            // Process search results to match loadNotes format - use backend ownership info
+            const searchNotes = (searchResults.items || []).map(note => {
+                // Determine note type based on backend ownership flags
+                let noteType;
+                if (note.is_owned) {
+                    noteType = NOTE_TYPES.OWNED;
+                } else if (note.is_shared) {
+                    noteType = NOTE_TYPES.SHARED_WITH_ME;
+                } else {
+                    // Fallback - should not happen with correct backend
+                    noteType = NOTE_TYPES.OWNED;
+                }
+
+                return {
+                    ...note,
+                    note_type: noteType
+                };
+            });
+            this.currentNotes = searchNotes;
             this.currentPage = searchResults.page || 1;
             this.totalPages = searchResults.pages || 1;
             this.currentFilters = { q: searchQuery, tagFilter, ownerFilter };
@@ -573,6 +830,54 @@ class NotesManager {
         return div.innerHTML;
     }
 
+    // Process note content to make links clickable and handle multimedia
+    processNoteContent(content) {
+        if (!content) return '';
+
+        // Escape HTML first
+        let processedContent = this.escapeHtml(content);
+
+        // Convert URLs to clickable links
+        const urlRegex = /(https?:\/\/[^\s]+)/gi;
+        processedContent = processedContent.replace(urlRegex, (url) => {
+            // Check if it's an image
+            const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+            const videoExtensions = /\.(mp4|webm|ogg|mov)$/i;
+            const audioExtensions = /\.(mp3|wav|ogg|m4a)$/i;
+
+            if (imageExtensions.test(url)) {
+                return `<div class="media-container">
+                    <img src="${url}" alt="Embedded image" class="embedded-image" loading="lazy" />
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="media-link">${url}</a>
+                </div>`;
+            } else if (videoExtensions.test(url)) {
+                return `<div class="media-container">
+                    <video controls class="embedded-video" preload="metadata">
+                        <source src="${url}">
+                        Your browser does not support the video tag.
+                    </video>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="media-link">${url}</a>
+                </div>`;
+            } else if (audioExtensions.test(url)) {
+                return `<div class="media-container">
+                    <audio controls class="embedded-audio" preload="metadata">
+                        <source src="${url}">
+                        Your browser does not support the audio tag.
+                    </audio>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="media-link">${url}</a>
+                </div>`;
+            } else {
+                // Regular link
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="external-link">${url}</a>`;
+            }
+        });
+
+        // Convert newlines to <br> tags
+        processedContent = processedContent.replace(/\n/g, '<br>');
+
+        return processedContent;
+    }
+
     formatDate(dateString) {
         if (!dateString) return 'Unknown';
         const date = new Date(dateString);
@@ -608,14 +913,13 @@ class NotesManager {
         document.getElementById('noteForm').addEventListener('submit', (e) => this.handleNoteSubmit(e));
         document.getElementById('cancelEdit').addEventListener('click', () => this.showDashboard());
 
-        // Set up share users input
-        document.getElementById('shareWithUsers').addEventListener('keypress', (e) => {
+        // Set up share users input (simplified)
+        document.getElementById('shareUsernameInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const username = e.target.value.trim();
-                const permission = document.getElementById('sharePermissionSelect').value;
                 if (username) {
-                    this.addUserToShareList(username, permission);
+                    this.validateAndAddUser(username);
                     e.target.value = '';
                 }
             }

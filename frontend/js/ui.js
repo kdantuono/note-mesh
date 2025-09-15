@@ -34,11 +34,19 @@ function showToast(message, type = TOAST_TYPES.INFO, duration = CONFIG.TOAST_DUR
             break;
     }
 
+    // Determine if toast should be persistent (for errors and warnings)
+    const isPersistent = type === TOAST_TYPES.ERROR || type === TOAST_TYPES.WARNING;
+
     toast.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
             ${icon}
-            <span>${escapeHtml(message)}</span>
-            <button onclick="this.parentElement.parentElement.remove()" style="margin-left: auto; background: none; border: none; cursor: pointer; opacity: 0.7;">
+            <div style="flex: 1;">
+                <span>${escapeHtml(message)}</span>
+                ${isPersistent ? '<div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.25rem;">Click × to dismiss</div>' : ''}
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()"
+                    style="margin-left: auto; background: none; border: none; cursor: pointer; opacity: 0.7; padding: 0.25rem;"
+                    title="${isPersistent ? 'Click to dismiss' : 'Close'}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -46,13 +54,18 @@ function showToast(message, type = TOAST_TYPES.INFO, duration = CONFIG.TOAST_DUR
 
     container.appendChild(toast);
 
-    // Auto-remove after duration
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
-            setTimeout(() => toast.remove(), 300);
-        }
-    }, duration);
+    // Auto-remove after duration (only for success and info toasts)
+    if (!isPersistent) {
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOutRight 0.3s ease-in forwards';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    } else {
+        // For persistent toasts, add a subtle pulse animation to draw attention
+        toast.style.animation = 'slideInRight 0.3s ease-out, pulse 2s ease-in-out 1s';
+    }
 }
 
 // Sharing management
@@ -94,10 +107,7 @@ class SharingManager {
     // Add user to share list
     async addUserToShare() {
         const usernameInput = document.getElementById('shareWithUser');
-        const permissionSelect = document.getElementById('sharePermission');
-
         const username = usernameInput.value.trim();
-        const permission = permissionSelect.value;
 
         if (!username) {
             showToast('Please enter a username', TOAST_TYPES.ERROR);
@@ -106,6 +116,12 @@ class SharingManager {
 
         if (username === authManager.getCurrentUser()?.username) {
             showToast('You cannot share a note with yourself', TOAST_TYPES.ERROR);
+            return;
+        }
+
+        // Basic username validation
+        if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+            showToast('Username must be 3-20 characters (letters, numbers, underscore only)', TOAST_TYPES.ERROR);
             return;
         }
 
@@ -118,7 +134,7 @@ class SharingManager {
         // Add to local list (will be saved when modal is confirmed)
         this.sharedUsers.push({
             username: username,
-            permission: permission,
+            permission: 'read', // Always read-only as per specs
             pending: true // Mark as pending until API call
         });
 
@@ -145,7 +161,7 @@ class SharingManager {
             <div class="shared-user">
                 <div class="shared-user-info">
                     <div class="shared-user-name">${escapeHtml(user.username)}</div>
-                    <div class="shared-user-permission">${user.permission === 'write' ? 'Read & Write' : 'Read Only'}</div>
+                    <div class="shared-user-permission">Read Only Access</div>
                 </div>
                 <button onclick="sharingManager.removeUserFromShare('${escapeHtml(user.username)}')"
                         class="btn btn-outline" style="padding: 0.25rem 0.5rem;">
@@ -165,19 +181,49 @@ class SharingManager {
         }
 
         try {
-            // Share with each user
+            showSpinner(true);
+
+            // Share with each user (read-only access)
             const sharePromises = this.sharedUsers.map(user =>
-                apiClient.shareNote(this.currentNote.id, user.username, user.permission)
+                apiClient.shareNote(this.currentNote.id, user.username, 'read')
             );
 
-            await Promise.all(sharePromises);
+            const results = await Promise.allSettled(sharePromises);
 
-            showToast(`Note shared with ${this.sharedUsers.length} user(s)`, TOAST_TYPES.SUCCESS);
-            this.hideShareModal();
+            // Check results and provide detailed feedback
+            const successful = results.filter(result => result.status === 'fulfilled').length;
+            const failed = results.filter(result => result.status === 'rejected');
+
+            if (successful > 0) {
+                showToast(`Note shared with ${successful} user(s) (read-only access)`, TOAST_TYPES.SUCCESS);
+            }
+
+            if (failed.length > 0) {
+                const failedUsernames = failed.map((result, index) => this.sharedUsers[results.indexOf(result)].username);
+                showToast(`Failed to share with: ${failedUsernames.join(', ')}. They may not exist in the system.`, TOAST_TYPES.WARNING);
+            }
+
+            if (successful > 0) {
+                this.hideShareModal();
+                // Refresh the note detail to show updated sharing info
+                if (notesManager && notesManager.currentNote) {
+                    notesManager.showNoteDetail(notesManager.currentNote.id);
+                }
+            }
 
         } catch (error) {
             console.error('Failed to share note:', error);
-            showToast(error.message || 'Failed to share note', TOAST_TYPES.ERROR);
+            let errorMessage = 'Failed to share note';
+
+            if (error.message && error.message !== '[object Object]') {
+                errorMessage = error.message;
+            } else if (error.detail) {
+                errorMessage = error.detail;
+            }
+
+            showToast(errorMessage, TOAST_TYPES.ERROR);
+        } finally {
+            showSpinner(false);
         }
     }
 
