@@ -2,7 +2,7 @@
 Unit tests for Share model.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -83,8 +83,7 @@ class TestShareModel:
         note = Note(title="Expiring", content="Content", owner_id=test_user.id)
         test_session.add(note)
         await test_session.commit()
-
-        expires = datetime.utcnow() + timedelta(days=7)
+        expires = datetime.now(timezone.utc) + timedelta(days=7)
 
         share = Share(
             note_id=note.id,
@@ -97,7 +96,13 @@ class TestShareModel:
         await test_session.commit()
         await test_session.refresh(share)
 
-        assert share.expires_at == expires
+        # Normalize potential naive datetime stored by SQLite when reading back
+        share_exp = (
+            share.expires_at.replace(tzinfo=timezone.utc)
+            if share.expires_at.tzinfo is None
+            else share.expires_at
+        )
+        assert share_exp == expires
         assert share.is_active is True
         assert share.is_expired is False
 
@@ -112,7 +117,7 @@ class TestShareModel:
         await test_session.commit()
 
         # Set expiry in the past
-        expires = datetime.utcnow() - timedelta(hours=1)
+        expires = datetime.now(timezone.utc) - timedelta(hours=1)
 
         share = Share(
             note_id=note.id,

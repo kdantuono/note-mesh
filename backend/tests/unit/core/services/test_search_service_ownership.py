@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.notemesh.core.services.search_service import SearchService
 from src.notemesh.core.schemas.notes import NoteSearchRequest
@@ -42,8 +42,8 @@ class TestSearchServiceOwnership:
         note.title = "My Note"
         note.content = "Content I wrote"
         note.owner_id = user_id  # User owns this note
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = []
         return note
 
@@ -55,8 +55,8 @@ class TestSearchServiceOwnership:
         note.title = "Shared Note"
         note.content = "Content shared with me"
         note.owner_id = other_user_id  # Someone else owns this note
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = []
         return note
 

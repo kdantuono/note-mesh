@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.notemesh.core.services.search_service import SearchService
 from src.notemesh.core.schemas.notes import NoteSearchRequest
@@ -51,8 +51,8 @@ class TestSearchServiceTagFilter:
         note.title = "Work Meeting Notes"
         note.content = "Meeting about project planning"
         note.owner_id = uuid.uuid4()
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = [mock_tag_work]
         return note
 
@@ -64,8 +64,8 @@ class TestSearchServiceTagFilter:
         note.title = "Personal Reminder"
         note.content = "Remember to buy groceries"
         note.owner_id = uuid.uuid4()
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = [mock_tag_personal]
         return note
 
@@ -77,8 +77,8 @@ class TestSearchServiceTagFilter:
         note.title = "Untagged Note"
         note.content = "This note has no tags"
         note.owner_id = uuid.uuid4()
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = []
         return note
 

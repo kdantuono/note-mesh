@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from fastapi import HTTPException
@@ -28,7 +28,7 @@ class FakeShareRepo:
             ),
             permission=data.get("permission", "read"),
             share_message=data.get("share_message"),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             expires_at=None,
             last_accessed_at=None,
             is_active=True,
@@ -68,7 +68,7 @@ class FakeShareRepo:
             shared_with_user=Dummy(id=uuid.uuid4(), username="u", full_name="U"),
             permission=update_data.get("permission", "read"),
             share_message=update_data.get("share_message"),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             expires_at=None,
             last_accessed_at=None,
             is_active=True,
@@ -163,9 +163,7 @@ async def test_get_shared_note_permissions_and_owner(monkeypatch):
     fake_share = FakeShareRepo()
     fake_share.access[(note_id, user_id)] = {"can_read": True, "can_write": True, "can_share": True}
     fake_users = FakeUserRepo({})
-    from datetime import datetime
-
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     fake_notes = FakeNoteRepo(
         {
             note_id: Dummy(

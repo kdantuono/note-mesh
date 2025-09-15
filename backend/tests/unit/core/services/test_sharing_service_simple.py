@@ -36,7 +36,6 @@ class TestSharingServiceSimple:
         """Sample note ID."""
         return uuid.uuid4()
 
-    @pytest.mark.skip(reason="Complex _share_to_response method requires extensive mocking - keeping error path tests")
     @pytest.mark.asyncio
     async def test_share_note_success_calls_repo_methods(self, sharing_service, user_id, note_id):
         """Test that successful share calls appropriate repository methods."""
@@ -67,13 +66,12 @@ class TestSharingServiceSimple:
         mock_share.id = uuid.uuid4()
         sharing_service.share_repo.create_share.return_value = mock_share
 
-        # Test the method - we're not testing the response conversion, just the business logic
-        # Since _share_to_response is complex, we'll just verify the repo calls
-        try:
-            await sharing_service.share_note(user_id, request)
-        except AttributeError:
-            # Expected due to mock limitations in _share_to_response, but we can verify calls
-            pass
+        # Stub out complex response conversion to focus on repo interactions
+        sharing_service._share_to_response = Mock(return_value={"id": mock_share.id})
+
+        # Execute
+        result = await sharing_service.share_note(user_id, request)
+        assert isinstance(result, list) and len(result) == 1
 
         # Verify repository calls were made correctly
         sharing_service.note_repo.get_by_id_and_user.assert_called_once_with(note_id, user_id)

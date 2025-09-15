@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.notemesh.core.services.search_service import SearchService
 from src.notemesh.core.schemas.notes import NoteSearchRequest
@@ -161,8 +161,8 @@ class TestSearchServiceCoverage:
         mock_note.title = "Test Note"
         mock_note.content = "Test content"
         mock_note.owner_id = user_id
-        mock_note.created_at = datetime.utcnow()
-        mock_note.updated_at = datetime.utcnow()
+        mock_note.created_at = datetime.now(timezone.utc)
+        mock_note.updated_at = datetime.now(timezone.utc)
         mock_note.tags = []
 
         service.note_repo.search_notes = AsyncMock(return_value=[mock_note])

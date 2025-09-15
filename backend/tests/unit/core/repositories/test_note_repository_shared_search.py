@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.notemesh.core.repositories.note_repository import NoteRepository
 
@@ -39,8 +39,8 @@ class TestNoteRepositorySharedSearch:
         note.title = "My Own Note"
         note.content = "Content I wrote"
         note.owner_id = user_id
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = []
         return note
 
@@ -52,8 +52,8 @@ class TestNoteRepositorySharedSearch:
         note.title = "Shared Note"
         note.content = "Content shared with me"
         note.owner_id = other_user_id  # Owned by someone else
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.tags = []
         return note
 

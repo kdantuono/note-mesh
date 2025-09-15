@@ -406,7 +406,8 @@ class NoteService(INoteService):
         """Extract hyperlinks from text content using regex."""
         import re
 
-        url_pattern = r'https?://[^\s<>":' "'" "`|(){}[\]]*"
+        # One raw string; escape characters inside the character class to avoid SyntaxWarning
+        url_pattern = r"https?://[^\s<>\":'`|(){}\[\]]*"
         urls = re.findall(url_pattern, text, re.IGNORECASE)
         return list(set(urls))
 

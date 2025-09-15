@@ -25,8 +25,8 @@ async def test_create_and_decode_access_token(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
 
-    # Mock Redis client
-    async def mock_get_redis_client():
+    # Mock Redis client: sync factory returning object with async methods
+    def mock_get_redis_client():
         class MockRedis:
             async def connect(self):
                 pass
@@ -51,8 +51,8 @@ async def test_decode_access_token_invalid_signature(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
 
-    # Mock Redis client
-    async def mock_get_redis_client():
+    # Mock Redis client: sync factory returning object with async methods
+    def mock_get_redis_client():
         class MockRedis:
             async def connect(self):
                 pass
@@ -77,8 +77,8 @@ async def test_get_user_id_from_token(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
 
-    # Mock Redis client
-    async def mock_get_redis_client():
+    # Mock Redis client: sync factory returning object with async methods
+    def mock_get_redis_client():
         class MockRedis:
             async def connect(self):
                 pass
@@ -99,8 +99,8 @@ async def test_get_user_id_from_token_invalid_payload(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "get_settings", lambda: DummySettings())
 
-    # Mock Redis client
-    async def mock_get_redis_client():
+    # Mock Redis client: sync factory returning object with async methods
+    def mock_get_redis_client():
         class MockRedis:
             async def connect(self):
                 pass

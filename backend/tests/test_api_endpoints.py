@@ -24,18 +24,18 @@ def test_app_creation():
         # Replace the real function
         src.notemesh.database.create_tables = mock_create_tables
 
-        # Import app
+        # Import app to ensure creation doesn't crash
+        from src.notemesh.main import app  # noqa: F401
 
         print("✓ FastAPI app created successfully")
-
-        return True
+        assert True
 
     except Exception as e:
         print(f"✗ App creation error: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False
 
 
 def test_route_collection():
@@ -92,21 +92,21 @@ def test_route_collection():
 
         if missing_endpoints:
             print(f"✗ Missing endpoints: {missing_endpoints}")
-            return False
+            assert False, f"Missing endpoints: {missing_endpoints}"
 
         print("✓ All expected endpoints found")
 
         # Print first few routes as sample
         print(f"Sample routes: {routes[:10]}")
 
-        return True
+        assert True
 
     except Exception as e:
         print(f"✗ Route collection error: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False
 
 
 if __name__ == "__main__":

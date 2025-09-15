@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.notemesh.core.repositories.note_repository import NoteRepository
 
@@ -34,8 +34,8 @@ class TestNoteRepositoryTagFilter:
         note.title = "Work Meeting Notes"
         note.content = "Meeting about project planning"
         note.owner_id = uuid.uuid4()
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
 
         # Mock tag
         tag = Mock()
@@ -51,8 +51,8 @@ class TestNoteRepositoryTagFilter:
         note.title = "Personal Reminder"
         note.content = "Remember to buy groceries"
         note.owner_id = uuid.uuid4()
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
 
         # Mock tag
         tag = Mock()

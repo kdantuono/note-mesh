@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 
 class LoginRequest(BaseModel):
@@ -14,10 +14,11 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     remember_me: bool = Field(default=False)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {"username": "mario85", "password": "mypass123", "remember_me": False}
         }
+    )
 
 
 class RegisterRequest(BaseModel):
@@ -44,8 +45,8 @@ class RegisterRequest(BaseModel):
             raise ValueError("Passwords do not match")
         return self
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "username": "paperino",
                 "password": "paperino123!",
@@ -53,6 +54,7 @@ class RegisterRequest(BaseModel):
                 "full_name": "Rino detto Paperino",
             }
         }
+    )
 
 
 class TokenResponse(BaseModel):
@@ -64,8 +66,8 @@ class TokenResponse(BaseModel):
     expires_in: int = Field(description="Token expiration time in seconds")
     user: "UserResponse" = Field(description="User information")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -80,6 +82,7 @@ class TokenResponse(BaseModel):
                 },
             }
         }
+    )
 
 
 class UserResponse(BaseModel):
@@ -96,9 +99,9 @@ class UserResponse(BaseModel):
     notes_count: Optional[int] = Field(default=None, description="Total number of notes")
     shared_notes_count: Optional[int] = Field(default=None, description="Number of shared notes")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
                 "username": "mario_writer",
@@ -110,6 +113,7 @@ class UserResponse(BaseModel):
                 "shared_notes_count": 3,
             }
         }
+    )
 
 
 class RefreshTokenRequest(BaseModel):
@@ -117,10 +121,11 @@ class RefreshTokenRequest(BaseModel):
 
     refresh_token: str = Field(description="JWT refresh token")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
         }
+    )
 
 
 class PasswordChangeRequest(BaseModel):
@@ -139,14 +144,15 @@ class PasswordChangeRequest(BaseModel):
             raise ValueError("New passwords do not match")
         return self
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "current_password": "oldpassword123",
                 "new_password": "newsecurepassword123",
                 "confirm_new_password": "newsecurepassword123",
             }
         }
+    )
 
 
 class UserUpdateRequest(BaseModel):
@@ -168,8 +174,9 @@ class UserUpdateRequest(BaseModel):
                 )
         return v
 
-    class Config:
-        json_schema_extra = {"example": {"username": "newusername", "full_name": "New Full Name"}}
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"username": "newusername", "full_name": "New Full Name"}}
+    )
 
 
 # Forward reference resolution

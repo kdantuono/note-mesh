@@ -2,6 +2,7 @@
 
 from typing import Dict, List
 from uuid import UUID
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,7 @@ from ..schemas.sharing import (
     ShareResponse,
     ShareStatsResponse,
 )
+from ..schemas.notes import NoteListItem
 from .interfaces import ISharingService
 
 
@@ -113,7 +115,6 @@ class SharingService(ISharingService):
         owner = await self.user_repo.get_by_id(note.owner_id)
 
         # Build response, filling required fields with available info/defaults
-        from datetime import datetime
 
         permission_level = "write" if access_info.get("can_write") else "read"
 
@@ -133,11 +134,11 @@ class SharingService(ISharingService):
             shared_by_id=note.owner_id,  # Fallback to owner as sharer
             shared_by_username=owner.username if owner else "Unknown",
             permission_level=permission_level,
-            shared_at=getattr(note, "created_at", datetime.utcnow()),
+            shared_at=getattr(note, "created_at", datetime.now(timezone.utc)),
             expires_at=None,
             share_message=None,
-            created_at=getattr(note, "created_at", datetime.utcnow()),
-            updated_at=getattr(note, "updated_at", datetime.utcnow()),
+            created_at=getattr(note, "created_at", datetime.now(timezone.utc)),
+            updated_at=getattr(note, "updated_at", datetime.now(timezone.utc)),
             last_accessed=None,
             can_write=access_info.get("can_write", False),
             can_share=access_info.get("can_share", False),
@@ -190,8 +191,6 @@ class SharingService(ISharingService):
 
     def _share_to_response(self, share) -> ShareResponse:
         """Convert share model to response."""
-        from datetime import datetime
-        from ..schemas.notes import NoteListItem
 
         shared_with_user_id = getattr(share, "shared_with_user_id", None)
         if not shared_with_user_id and getattr(share, "shared_with_user", None):
@@ -225,8 +224,8 @@ class SharingService(ISharingService):
                     is_shared=True,
                     is_owned=False,  # This is a shared note from recipient perspective
                     can_edit=getattr(share, "permission", "read") == "write",
-                    created_at=getattr(note, 'created_at', datetime.utcnow()),
-                    updated_at=getattr(note, 'updated_at', datetime.utcnow())
+                    created_at=getattr(note, 'created_at', datetime.now(timezone.utc)),
+                    updated_at=getattr(note, 'updated_at', datetime.now(timezone.utc))
                 )
 
         return ShareResponse(
@@ -248,7 +247,7 @@ class SharingService(ISharingService):
             permission_level=getattr(share, "permission", "read"),
             message=getattr(share, "share_message", None),
             note=note_data,  # Include complete note data
-            shared_at=getattr(share, "created_at", datetime.utcnow()),
+            shared_at=getattr(share, "created_at", datetime.now(timezone.utc)),
             expires_at=getattr(share, "expires_at", None),
             last_accessed=getattr(share, "last_accessed", None),
             is_active=getattr(share, "is_active", True),

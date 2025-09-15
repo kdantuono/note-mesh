@@ -199,7 +199,7 @@ class SearchService(ISearchService):
 
         # Cache the results for 5 minutes (300 seconds)
         try:
-            response_dict = response.dict()
+            response_dict = response.model_dump()
             await self.redis_client.cache_search_results(
                 str(cache_key_data), user_id, response_dict, expire=300
             )

@@ -1,6 +1,6 @@
 # Note sharing between users
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
@@ -47,7 +47,7 @@ class Share(BaseModel):
     )
 
     shared_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_accessed_at: Mapped[Optional[datetime]] = mapped_column(
@@ -92,19 +92,28 @@ class Share(BaseModel):
         """Check if share is active and not expired."""
         if self.status != ShareStatus.ACTIVE:
             return False
-        if self.expires_at and datetime.utcnow() > self.expires_at:
-            return False
+        if self.expires_at:
+            expires_at = self.expires_at
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires_at:
+                return False
         return True
 
     @property
     def is_expired(self) -> bool:
         """Check if expired."""
-        return self.expires_at is not None and datetime.utcnow() > self.expires_at
+        if self.expires_at is None:
+            return False
+        expires_at = self.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > expires_at
 
     def record_access(self) -> None:
         """Track when someone accessed the shared note."""
         self.access_count += 1
-        self.last_accessed_at = datetime.utcnow()
+        self.last_accessed_at = datetime.now(timezone.utc)
 
     def revoke(self) -> None:
         """Revoke access."""

@@ -1,0 +1,1516 @@
+{
+  "info": {
+    "name": "NoteMesh API Collection",
+    "description": "Complete API collection for NoteMesh with pippo, pluto, paperino users and 10+ notes distributed among them",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pippo_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pluto_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paperino_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["health"]
+        },
+        "description": "Check API health status"
+      }
+    },
+    {
+      "name": "1. Setup - Create Default Users",
+      "item": [
+        {
+          "name": "Register pippo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Pippo registered successfully', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Pippo registration response', function () {",
+                  "        pm.response.to.be.ok;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pippo\",\n  \"full_name\": \"Pippo Disney\",\n  \"password\": \"pippo123\",\n  \"confirm_password\": \"pippo123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register user pippo with password pippo123"
+          }
+        },
+        {
+          "name": "Register pluto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Pluto registered successfully', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Pluto registration response', function () {",
+                  "        pm.response.to.be.ok;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pluto\",\n  \"full_name\": \"Pluto Disney\",\n  \"password\": \"pluto123\",\n  \"confirm_password\": \"pluto123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register user pluto with password pluto123"
+          }
+        },
+        {
+          "name": "Register paperino",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Paperino registered successfully', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Paperino registration response', function () {",
+                  "        pm.response.to.be.ok;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"paperino\",\n  \"full_name\": \"Paperino Disney\",\n  \"password\": \"paperino123\",\n  \"confirm_password\": \"paperino123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register user paperino with password paperino123"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Login Users",
+      "item": [
+        {
+          "name": "Login pippo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pippo_token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "    pm.test('Pippo login successful', function () {",
+                  "        pm.response.to.have.status(200);",
+                  "        pm.expect(jsonData).to.have.property('access_token');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pippo\",\n  \"password\": \"pippo123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login pippo and store token"
+          }
+        },
+        {
+          "name": "Login pluto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pluto_token', jsonData.access_token);",
+                  "    pm.test('Pluto login successful', function () {",
+                  "        pm.response.to.have.status(200);",
+                  "        pm.expect(jsonData).to.have.property('access_token');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pluto\",\n  \"password\": \"pluto123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login pluto and store token"
+          }
+        },
+        {
+          "name": "Login paperino",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('paperino_token', jsonData.access_token);",
+                  "    pm.test('Paperino login successful', function () {",
+                  "        pm.response.to.have.status(200);",
+                  "        pm.expect(jsonData).to.have.property('access_token');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"paperino\",\n  \"password\": \"paperino123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login paperino and store token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Create Notes - Pippo (4 notes)",
+      "item": [
+        {
+          "name": "Pippo Note 1 - Avventure di Topolinia",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pippo_note1_id', jsonData.id);",
+                  "    pm.test('Pippo note 1 created', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Le Avventure di Topolinia - Pianificazione Eventi\",\n  \"content\": \"Piano per organizzare gli eventi estivi a Topolinia:\\n\\n## Eventi in Programma\\n1. **Festival della Musica** (15-17 Luglio)\\n   - Palco principale in Piazza Topolino\\n   - 15 artisti confermati\\n   - Aspettative: 5000 visitatori\\n\\n2. **Gara di Cucina con Nonna Papera** (23 Luglio)\\n   - Location: Ristorante di Paperino\\n   - Premi: Trofeo Cucchiaio d'Oro\\n   - Giudici: Nonna Papera, Zio Paperone\\n\\n3. **Corsa dei Go-Kart** (30 Luglio)\\n   - Circuito: Via dei Paperi\\n   - Partecipanti: Max 20\\n   - Sponsor: Autofficina di Pietro Gambadilegno\\n\\n## Budget Totale\\n- Festival Musica: €12,000\\n- Gara Cucina: €3,500\\n- Corsa Go-Kart: €8,000\\n- Marketing: €2,500\\n- **Totale: €26,000**\\n\\n## Contatti Importanti\\n- Sindaco Topolino: sindaco@topolinia.it\\n- Vigili del Fuoco: emergenze@topolinia.it\\n- Ufficio Stampa: stampa@topolinia.it\\n\\nScadenza organizing committee: 1 Luglio 2024\",\n  \"tags\": [\"eventi\", \"topolinia\", \"festival\", \"estate\", \"organizzazione\"],\n  \"is_pinned\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Pippo Note 2 - Lista della Spesa",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Response has required fields', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData).to.have.property('content');",
+                  "        pm.expect(jsonData).to.have.property('tags');",
+                  "        pm.expect(jsonData).to.have.property('created_at');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Title matches request', function () {",
+                  "        pm.expect(jsonData.title).to.contain('Lista della Spesa');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Tags are present', function () {",
+                  "        pm.expect(jsonData.tags).to.be.an('array');",
+                  "        pm.expect(jsonData.tags).to.include('spesa');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('pippo_note2_id', jsonData.id);",
+                  "    console.log('Pippo Note 2 created with ID:', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lista della Spesa - Weekend con Pluto\",\n  \"content\": \"Lista spesa per il weekend con Pluto e gli amici:\\n\\n## Alimentari\\n- [ ] 2kg di croccantini per Pluto (marca preferita: Osso Bello)\\n- [ ] 1 litro di latte\\n- [ ] 6 uova fresche\\n- [ ] 500g di formaggio (quello che piace a Topolino)\\n- [ ] 2 baguette dal panificio di Gastone\\n- [ ] Marmellata di fragole\\n- [ ] 1kg di pasta (spaghetti)\\n- [ ] Salsa di pomodoro (2 barattoli)\\n\\n## Per la Festa\\n- [ ] Palloncini colorati (rossi, gialli, blu)\\n- [ ] Tovaglia a quadretti\\n- [ ] Bicchieri di carta (20 pezzi)\\n- [ ] Piatti di carta (20 pezzi)\\n- [ ] Candeline per la torta\\n- [ ] Ghirlanda \\\"Buon Compleanno Pluto\\\"\\n\\n## Casa\\n- [ ] Detersivo per piatti\\n- [ ] Carta igienica (6 rotoli)\\n- [ ] Spugne per cucina\\n- [ ] Sacchetti spazzatura\\n\\n## Note\\n- Passare dalla farmacia per le vitamine di Pluto\\n- Controllare se il negozio di giocattoli ha l'osso gigante\\n- Prenotare tavolo da Paperino per cena domenica\\n\\n**Budget stimato: €85**\\n**Negozi: Supermercato Paperone, Panificio Gastone, Farmacia Dottoressa Crock**\",\n  \"tags\": [\"spesa\", \"weekend\", \"pluto\", \"festa\", \"casa\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Pippo Note 3 - Ricette di Nonna Papera",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Note created with correct structure', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData).to.have.property('content');",
+                  "        pm.expect(jsonData).to.have.property('owner_id');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Title contains Nonna Papera', function () {",
+                  "        pm.expect(jsonData.title).to.contain('Nonna Papera');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Content includes recipe details', function () {",
+                  "        pm.expect(jsonData.content).to.contain('Ingredienti');",
+                  "        pm.expect(jsonData.content).to.contain('Preparazione');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Recipe tags are present', function () {",
+                  "        pm.expect(jsonData.tags).to.include('ricette');",
+                  "        pm.expect(jsonData.tags).to.include('nonna-papera');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('pippo_note3_id', jsonData.id);",
+                  "    console.log('Pippo Note 3 (Ricette) created with ID:', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ricette Segrete di Nonna Papera\",\n  \"content\": \"Collezione delle migliori ricette di Nonna Papera:\\n\\n## 🍰 Torta di Mele della Nonna\\n**Ingredienti:**\\n- 4 mele Golden\\n- 200g farina 00\\n- 150g zucchero\\n- 3 uova\\n- 100ml olio di semi\\n- 1 bustina lievito\\n- Cannella q.b.\\n\\n**Preparazione:**\\n1. Sbattere uova e zucchero\\n2. Aggiungere olio e farina\\n3. Incorporare mele a cubetti\\n4. Cuocere 180° per 45 min\\n\\n*Segreto di Nonna: aggiungere una scorza di limone!*\\n\\n## 🍝 Pasta e Fagioli come in Toscana\\n**Ingredienti:**\\n- 300g pasta mista\\n- 400g fagioli cannellini\\n- 1 costa di sedano\\n- 1 carota\\n- 1 cipolla\\n- Olio EVO, rosmarino\\n\\n**Preparazione:**\\n1. Soffriggere verdure tritate\\n2. Aggiungere fagioli e brodo\\n3. Cuocere pasta in pentola\\n4. Manteccare con olio crudo\\n\\n## 🥧 Crostata della Domenica\\n**Per la frolla:**\\n- 300g farina\\n- 150g burro\\n- 100g zucchero\\n- 1 uovo\\n- Scorza limone\\n\\n**Ripieno:** marmellata di albicocche fatta in casa\\n\\n*Tempo cottura: 25 min a 180°*\\n\\n**Note:** Le ricette sono state tramandate da generazioni. Nonna dice sempre: \\\"Il segreto è l'amore che ci metti!\\\"\",\n  \"tags\": [\"ricette\", \"nonna-papera\", \"cucina\", \"tradizione\", \"famiglia\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Pippo Note 4 - Viaggio a Paperopoli",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Note has all required properties', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData).to.have.property('content');",
+                  "        pm.expect(jsonData).to.have.property('can_edit');",
+                  "        pm.expect(jsonData.can_edit).to.be.true;",
+                  "    });",
+                  "    ",
+                  "    pm.test('Travel note title is correct', function () {",
+                  "        pm.expect(jsonData.title).to.contain('Paperopoli');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Travel content includes itinerary', function () {",
+                  "        pm.expect(jsonData.content).to.contain('Itinerario');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Travel tags include viaggio', function () {",
+                  "        pm.expect(jsonData.tags).to.include('viaggio');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('pippo_note4_id', jsonData.id);",
+                  "    console.log('Pippo Note 4 (Viaggio) created with ID:', jsonData.id);",
+                  "    console.log('All Pippo notes created successfully!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Pianificazione Viaggio a Paperopoli\",\n  \"content\": \"Piano dettagliato per il viaggio a Paperopoli con tutti gli amici:\\n\\n## 📅 Programma di Viaggio\\n**Date:** 15-18 Agosto 2024\\n**Partecipanti:** Pippo, Pluto, Paperino, Topolino, Minnie\\n\\n### Giorno 1 - Arrivo (15 Agosto)\\n- **09:00** Partenza da Topolinia in pullman\\n- **12:00** Arrivo Hotel Paperone Palace\\n- **14:00** Pranzo al ristorante \\\"Da Gastone\\\"\\n- **16:00** Visita al Deposito di Zio Paperone\\n- **20:00** Cena e passeggiata sul Lungofiume\\n\\n### Giorno 2 - Turismo (16 Agosto)\\n- **09:00** Colazione in hotel\\n- **10:00** Tour della città con la Guida Qui\\n- **12:30** Pranzo picnic al Parco dei Paperi\\n- **15:00** Visita Museo della Storia di Paperopoli\\n- **18:00** Shopping in Via del Dollaro\\n- **20:30** Spettacolo al Teatro dell'Opera\\n\\n### Giorno 3 - Avventura (17 Agosto)\\n- **08:00** Escursione alle Montagne Rocciose\\n- **12:00** Pranzo al sacco in natura\\n- **15:00** Caccia al tesoro organizzata da Archimede\\n- **19:00** Barbecue nella Villa di Paperino\\n- **21:00** Giochi e musica fino a tardi\\n\\n### Giorno 4 - Partenza (18 Agosto)\\n- **10:00** Check-out dall'hotel\\n- **11:00** Ultime compere nei negozietti\\n- **13:00** Pranzo di arrivederci\\n- **15:00** Partenza per Topolinia\\n- **18:00** Arrivo a casa\\n\\n## 💰 Budget Stimato\\n- Hotel (3 notti): €300 a persona\\n- Trasporti: €50 a persona\\n- Pasti: €200 a persona\\n- Attività: €100 a persona\\n- **Totale: €650 a persona**\\n\\n## 📋 Cose da Portare\\n- [ ] Macchina fotografica\\n- [ ] Crema solare\\n- [ ] Costume da bagno\\n- [ ] Scarpe comode\\n- [ ] Medicinali di base\\n- [ ] Caricabatterie\\n- [ ] Snack per Pluto\\n\\n## 📞 Contatti Utili\\n- Hotel Paperone Palace: +39 0123 456789\\n- Guida Qui: +39 0123 987654\\n- Emergenze Paperopoli: 113\\n\\n*Non vedo l'ora di partire! Sarà un'avventura fantastica! 🎉*\",\n  \"tags\": [\"viaggio\", \"paperopoli\", \"vacanza\", \"amici\", \"pianificazione\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Create Notes - Pluto (3 notes)",
+      "item": [
+        {
+          "name": "Pluto Note 1 - Addestramento Cani",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pluto_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pluto_note1_id', jsonData.id);",
+                  "    pm.test('Pluto note 1 created', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Guida Completa all'Addestramento dei Cani\",\n  \"content\": \"Manuale completo per l'addestramento dei cani basato sulla mia esperienza:\\n\\n## 🐕 Comandi Base Essenziali\\n\\n### 1. SEDUTO\\n- **Come insegnarlo:** Tenere il premio sopra la testa del cane\\n- **Parola chiave:** \\\"Seduto\\\" + gesto con la mano\\n- **Ripetizioni:** 10-15 volte al giorno\\n- **Tempo stimato:** 1-2 settimane\\n\\n### 2. RESTA\\n- **Posizione:** Iniziare con il cane seduto\\n- **Gesto:** Mano aperta verso il cane\\n- **Distanza:** Iniziare a 1 metro, aumentare gradualmente\\n- **Durata:** Da 5 secondi a 2 minuti\\n\\n### 3. VIENI\\n- **Ambiente:** Area sicura e recintata\\n- **Motivazione:** Premi gustosi + entusiasmo\\n- **Mai punire:** Se il cane viene chiamato, sempre premiare\\n- **Pratica:** 20-30 volte a settimana\\n\\n### 4. TERRA\\n- **Da seduto:** Abbassare il premio verso terra\\n- **Guidare:** Il naso segue il premio\\n- **Pazienza:** Alcuni cani impiegano più tempo\\n- **Ricompensa:** Appena tocca terra con i gomiti\\n\\n## 🎾 Tecniche di Rinforzo Positivo\\n\\n**Premi più efficaci:**\\n- Bocconcini di pollo bollito\\n- Cubetti di formaggio\\n- Biscottini commerciali di alta qualità\\n- Giochi preferiti\\n- Coccole ed elogi\\n\\n**Timing perfetto:**\\n- Premiare IMMEDIATAMENTE dopo il comportamento corretto\\n- Usare un \\\"clicker\\\" per precisione maggiore\\n- Variare i premi per mantenere interesse\\n\\n## 📚 Errori Comuni da Evitare\\n\\n❌ **Non fare mai:**\\n- Urlare o punire fisicamente\\n- Tirare forte il guinzaglio\\n- Addestrare quando si è nervosi\\n- Sessioni troppo lunghe (max 15 minuti)\\n\\n✅ **Sempre fare:**\\n- Essere pazienti e costanti\\n- Finire con successo\\n- Addestrare in luoghi diversi\\n- Coinvolgere tutta la famiglia\\n\\n## 🏆 Programma Settimanale\\n\\n**Lunedì:** Comandi base (15 min)\\n**Martedì:** Socializzazione al parco\\n**Mercoledì:** Giochi di attivazione mentale\\n**Giovedì:** Ripasso comandi + novità\\n**Venerdì:** Addestramento al guinzaglio\\n**Sabato:** Libero gioco e relax\\n**Domenica:** Ripasso generale\\n\\n## 📱 App Utili\\n- Dog Training by Dogo\\n- Pupford Dog Training\\n- GoodPup\\n\\n*Ricorda: ogni cane è unico! Alcuni imparano in giorni, altri in mesi. L'importante è la costanza e l'amore! 🐾*\\n\\n---\\n*Basato sui miei anni di esperienza come cane più famoso di Topolinia! Bau bau! 🐕*\",\n  \"tags\": [\"addestramento\", \"cani\", \"comportamento\", \"educazione\", \"animali\"],\n  \"is_pinned\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Pluto Note 2 - Parchi per Cani Topolinia",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pluto_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pluto Note 2 - Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Response contains note structure', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData).to.have.property('owner_username');",
+                  "        pm.expect(jsonData.owner_username).to.equal('pluto');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Parks note title includes Parchi', function () {",
+                  "        pm.expect(jsonData.title).to.contain('Parchi');",
+                  "        pm.expect(jsonData.title).to.contain('Topolinia');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Content includes park locations', function () {",
+                  "        pm.expect(jsonData.content).to.contain('Parco');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Dog-related tags present', function () {",
+                  "        pm.expect(jsonData.tags).to.include.members(['parchi', 'cani']);",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('pluto_note2_id', jsonData.id);",
+                  "    console.log('Pluto Note 2 (Parchi) created with ID:', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"I Migliori Parchi per Cani di Topolinia\",\n  \"content\": \"Guida completa ai parchi dog-friendly di Topolinia e dintorni:\\n\\n## 🌳 Parco Centrale di Topolinia\\n**Indirizzo:** Via Mickey Mouse, 1\\n**Orari:** 6:00 - 22:00 tutti i giorni\\n**Dimensioni:** 5 ettari\\n\\n**Servizi disponibili:**\\n- ✅ Area cani senza guinzaglio (2 ettari)\\n- ✅ Fontanelle per cani\\n- ✅ Distributori di sacchettini\\n- ✅ Panchine ombreggiate\\n- ✅ Area giochi agility\\n- ✅ Parcheggio gratuito\\n\\n**Recensione:** ⭐⭐⭐⭐⭐\\n*Il mio parco preferito! Sempre pulito, tanti amici cani e spazio per correre liberamente.*\\n\\n---\\n\\n## 🏞️ Parco Natura dei Paperi\\n**Indirizzo:** Lago dei Paperi, zona nord\\n**Orari:** Alba - tramonto\\n**Dimensioni:** 8 ettari + lago\\n\\n**Servizi disponibili:**\\n- ✅ Accesso al lago per nuotare\\n- ✅ Sentieri naturalistici\\n- ✅ Area picnic con tavoli\\n- ✅ Toilette e fontanelle\\n- ❌ Nessuna recinzione (guinzaglio obbligatorio)\\n\\n**Recensione:** ⭐⭐⭐⭐\\n*Perfetto per le giornate calde! Il lago è fantastico, ma attenzione agli scoiattoli che distraggono!*\\n\\n---\\n\\n## 🌺 Giardini di Minnie\\n**Indirizzo:** Via delle Rose, 15\\n**Orari:** 7:00 - 20:00 (chiuso lunedì)\\n**Dimensioni:** 2 ettari\\n\\n**Servizi disponibili:**\\n- ✅ Percorso educativo\\n- ✅ Area relax per proprietari\\n- ✅ Negozio di accessori per cani\\n- ✅ Veterinario di turno (weekend)\\n- ⚠️ Ingresso a pagamento (€3)\\n\\n**Recensione:** ⭐⭐⭐\\n*Bello ma piccolo. Ideale per cani anziani o per socializzazione controllata.*\\n\\n---\\n\\n## 🏃‍♂️ Campo Sportivo Paperino\\n**Indirizzo:** Via dello Sport, 42\\n**Orari:** 15:00 - 19:00 (feriali), 9:00 - 18:00 (weekend)\\n**Dimensioni:** 1 ettaro\\n\\n**Servizi disponibili:**\\n- ✅ Attrezzature agility professionali\\n- ✅ Istruttore cinofilo (su prenotazione)\\n- ✅ Corsi di addestramento\\n- ✅ Competizioni mensili\\n- ❌ Solo per cani addestrati\\n\\n**Recensione:** ⭐⭐⭐⭐⭐\\n*Il top per l'addestramento! Ho imparato qui tutti i miei migliori trucchi!*\\n\\n---\\n\\n## 🌅 Collina del Sole\\n**Indirizzo:** Strada Panoramica, km 3\\n**Orari:** Sempre aperto\\n**Dimensioni:** 10 ettari\\n\\n**Servizi disponibili:**\\n- ✅ Vista panoramica su Topolinia\\n- ✅ Sentieri trekking\\n- ✅ Area barbecue\\n- ❌ Nessun servizio (portare acqua)\\n- ⚠️ Terreno collinare impegnativo\\n\\n**Recensione:** ⭐⭐⭐⭐\\n*Avventura garantita! Perfetto per cani atletici. La vista vale la fatica!*\\n\\n---\\n\\n## 🚗 Informazioni Utili\\n\\n**Regole Generali:**\\n- Sempre portare sacchettini per la pulizia\\n- Controllo veterinario aggiornato\\n- Guinzaglio sempre disponibile\\n- Rispettare gli orari\\n- Supervisionare sempre il proprio cane\\n\\n**Emergenze Veterinarie:**\\n- Clinica Dr. Crock: +39 0123 456789\\n- Pronto Soccorso Animali: +39 0123 111222\\n\\n**App Consigliate:**\\n- DogBuddy Topolinia (trova playmates)\\n- ParchiCani (recensioni e orari)\\n\\n*Buone passeggiate a tutti! Bau bau! 🐾*\",\n  \"tags\": [\"parchi\", \"cani\", \"topolinia\", \"tempo-libero\", \"natura\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Pluto Note 3 - Salute e Benessere",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pluto_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pluto Note 3 - Created successfully', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Health note has proper structure', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData).to.have.property('tags');",
+                  "        pm.expect(jsonData).to.have.property('is_owned');",
+                  "        pm.expect(jsonData.is_owned).to.be.true;",
+                  "    });",
+                  "    ",
+                  "    pm.test('Health-focused title and content', function () {",
+                  "        pm.expect(jsonData.title).to.contain('Salute');",
+                  "        pm.expect(jsonData.content).to.contain('salute');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Health tags validation', function () {",
+                  "        pm.expect(jsonData.tags).to.include('salute');",
+                  "        pm.expect(jsonData.tags).to.include('benessere');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('pluto_note3_id', jsonData.id);",
+                  "    console.log('Pluto Note 3 (Salute) created with ID:', jsonData.id);",
+                  "    console.log('All Pluto notes completed!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Guida alla Salute e Benessere Canino\",\n  \"content\": \"Tutto quello che ho imparato sulla salute dei cani in anni di vita felice:\\n\\n## 🏥 Controlli Veterinari Essenziali\\n\\n### Calendario Visite Annuali\\n- **Gennaio:** Controllo generale + vaccini\\n- **Aprile:** Prevenzione parassiti (pulci, zecche)\\n- **Luglio:** Check estate (colpo di calore, allergie)\\n- **Ottobre:** Controllo denti + analisi del sangue\\n\\n### Vaccini Obbligatori\\n- ✅ Cimurro\\n- ✅ Epatite\\n- ✅ Parvovirosi\\n- ✅ Parainfluenza\\n- ✅ Leptospirosi\\n- ✅ Rabbia (ogni 3 anni)\\n\\n### Controlli Periodici\\n- **Peso:** Settimanale (io peso 28kg)\\n- **Denti:** Pulizia quotidiana\\n- **Orecchie:** Pulizia bi-settimanale\\n- **Unghie:** Taglio mensile\\n- **Pelo:** Spazzolatura quotidiana\\n\\n---\\n\\n## 🍽️ Alimentazione Bilanciata\\n\\n### La Mia Dieta Quotidiana\\n**Colazione (7:00):**\\n- 200g crocchette premium\\n- 1 cucchiaio olio di salmone\\n- Vitamina E (2 volte/settimana)\\n\\n**Spuntino (12:00):**\\n- Carota cruda o mela (senza semi)\\n- Osso da masticare naturale\\n\\n**Cena (18:00):**\\n- 250g crocchette premium\\n- 100g carne bollita (pollo/manzo)\\n- Verdure miste (zucchine, carote)\\n\\n### Cibi VIETATI\\n❌ Cioccolato\\n❌ Cipolle e aglio\\n❌ Uva e uvetta\\n❌ Avocado\\n❌ Dolcificanti artificiali\\n❌ Ossa di pollo cotte\\n❌ Caffè e tè\\n\\n---\\n\\n## 💪 Esercizio Fisico\\n\\n### Routine Settimanale\\n**Lunedì:** Passeggiata lunga (45 min)\\n**Martedì:** Giochi in giardino (30 min)\\n**Mercoledì:** Nuotata al lago (20 min)\\n**Giovedì:** Addestramento e tricks (20 min)\\n**Venerdì:** Corsa con Pippo (30 min)\\n**Sabato:** Escursione in natura (60 min)\\n**Domenica:** Relax e giochi tranquilli\\n\\n### Segnali di Stanchezza\\n- Respirazione eccessiva\\n- Lingua molto lunga\\n- Ricerca di ombra\\n- Rallentamento del passo\\n- Salivazione intensa\\n\\n---\\n\\n## 🧠 Benessere Mentale\\n\\n### Stimolazione Cognitiva\\n- **Giochi puzzle:** 15 min al giorno\\n- **Nascondere premi:** Ricerca olfattiva\\n- **Nuovi percorsi:** Variare le passeggiate\\n- **Socializzazione:** Incontri con altri cani\\n- **Addestramento:** Imparare nuovi comandi\\n\\n### Gestione dello Stress\\n**Sintomi da monitorare:**\\n- Abbaiare eccessivo\\n- Comportamenti distruttivi\\n- Perdita di appetito\\n- Letargia o iperattività\\n\\n**Rimedi naturali:**\\n- Musica rilassante\\n- Massaggi delicati\\n- Routine regolari\\n- Spazi sicuri e confortevoli\\n\\n---\\n\\n## 🌡️ Emergenze Comuni\\n\\n### Primo Soccorso\\n**Kit sempre disponibile:**\\n- Termometro digitale\\n- Garze sterili\\n- Disinfettante\\n- Siringa (per dare medicine)\\n- Numero veterinario\\n\\n**Quando chiamare il veterinario:**\\n- Temperatura > 39.5°C o < 37°C\\n- Vomito persistente\\n- Difficoltà respiratorie\\n- Ferite profonde\\n- Comportamento anomalo\\n\\n---\\n\\n## 📱 App e Risorse Utili\\n\\n- **MyPet:** Diario medico digitale\\n- **DogHealth:** Promemoria vaccini\\n- **VetFinder:** Trova veterinari nearby\\n- **PetFirst Aid:** Emergenze e primo soccorso\\n\\n### Contatti Veterinari\\n- **Dr. Crock (veterinario di fiducia):** +39 0123 456789\\n- **Clinica 24h Topolinia:** +39 0123 111222\\n- **Emergenze:** 118 (specificare \\\"animale\\\")\\n\\n---\\n\\n*Ricorda: la prevenzione è sempre meglio della cura! Un cane sano è un cane felice! 🐕❤️*\\n\\n*Con affetto,\\nPluto - Il cane più saggio di Topolinia*\",\n  \"tags\": [\"salute\", \"benessere\", \"veterinario\", \"cani\", \"prevenzione\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Create Notes - Paperino (4 notes)",
+      "item": [
+        {
+          "name": "Paperino Note 1 - Ristorante Business Plan",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('paperino_note1_id', jsonData.id);",
+                  "    pm.test('Paperino note 1 created', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Business Plan - Ristorante da Paperino 2024\",\n  \"content\": \"Piano strategico per espandere il ristorante \\\"Da Paperino\\\" nel 2024:\\n\\n## 📊 Analisi Situazione Attuale\\n\\n### Punti di Forza\\n- ✅ Location centrale in Topolinia\\n- ✅ Ricette tradizionali di Nonna Papera\\n- ✅ Clientela affezionata (150 clienti regolari)\\n- ✅ Ottima reputazione (4.8/5 su Yelp)\\n- ✅ Staff fedele e competente\\n\\n### Aree di Miglioramento\\n- ⚠️ Spazio limitato (30 coperti)\\n- ⚠️ Menu stagionale da ampliare\\n- ⚠️ Mancanza delivery online\\n- ⚠️ Sistema prenotazioni obsoleto\\n- ⚠️ Marketing digitale insufficiente\\n\\n---\\n\\n## 🎯 Obiettivi 2024\\n\\n### Obiettivi Primari\\n1. **Aumentare fatturato del 35%** (da €180k a €245k)\\n2. **Espandere a 45 coperti** (ristrutturazione veranda)\\n3. **Lanciare servizio delivery** entro marzo\\n4. **Ottenere certificazione bio** per ingredienti\\n5. **Assumere 2 nuovi cuochi** specializzati\\n\\n### Obiettivi Secondari\\n- Organizzare 12 eventi tematici\\n- Creare corso di cucina mensile\\n- Partnership con produttori locali\\n- Sistema CRM per clienti fedeli\\n\\n---\\n\\n## 💰 Piano Finanziario\\n\\n### Investimenti Necessari\\n**Ristrutturazione Veranda:** €25,000\\n- Ampliamento sala (+15 posti)\\n- Climatizzazione\\n- Arredamento\\n\\n**Tecnologia:** €8,000\\n- Sistema POS nuovo\\n- App delivery personalizzata\\n- Software gestionale\\n- Tablet per camerieri\\n\\n**Marketing:** €6,000\\n- Sito web professionale\\n- Social media management\\n- Materiale promozionale\\n- Fotografia professionale\\n\\n**Attrezzature Cucina:** €12,000\\n- Forno a legna professionale\\n- Cella frigorifera aggiuntiva\\n- Attrezzature moderne\\n\\n**Totale Investimento:** €51,000\\n\\n### Fonti di Finanziamento\\n- Risparmi personali: €20,000\\n- Prestito bancario: €25,000\\n- Contributi regionali: €6,000\\n\\n---\\n\\n## 🍽️ Nuovo Menu Strategico\\n\\n### Ampliamento Offerta\\n**Colazioni (7:00-11:00):**\\n- Cornetti artigianali caldi\\n- Caffetteria specialty\\n- Brunch weekend\\n\\n**Pranzi Business (12:00-15:00):**\\n- Menu fisso €15 (primo+secondo+contorno)\\n- Insalate gourmet\\n- Panini artigianali\\n\\n**Cene Romantic (19:00-23:00):**\\n- Menu degustazione (€45)\\n- Vini locali selezionati\\n- Atmosfera candele\\n\\n**Delivery/Takeaway:**\\n- Pizza al taglio\\n- Primi piatti family size\\n- Dolci monoporzione\\n\\n---\\n\\n## 📱 Strategia Digitale\\n\\n### Social Media Plan\\n**Instagram (@ristorantedapaperino):**\\n- 3 post/settimana\\n- Stories quotidiane\\n- Reels ricette\\n- Live cooking show\\n\\n**Facebook:**\\n- Eventi e promozioni\\n- Recensioni clienti\\n- Menu del giorno\\n- Prenotazioni\\n\\n**TikTok:**\\n- Video ricette quick\\n- Dietro le quinte\\n- Challenge culinarie\\n\\n### Website Features\\n- Prenotazioni online\\n- Menu digitale\\n- Gallery foto\\n- Blog ricette\\n- Sistema loyalty\\n\\n---\\n\\n## 👥 Piano Risorse Umane\\n\\n### Team Attuale\\n- Paperino (Chef & Owner)\\n- Nonna Papera (Consulente ricette)\\n- Maria (Cameriera senior)\\n- Giuseppe (Aiuto cuoco)\\n\\n### Nuove Assunzioni\\n- **Sous Chef** (marzo 2024)\\n- **Cameriere esperto** (aprile 2024)\\n- **Social Media Manager** (part-time, maggio)\\n- **Delivery driver** (giugno 2024)\\n\\n### Formazione Staff\\n- Corso sommelier base\\n- Training customer service\\n- Certificazione HACCP aggiornata\\n- Team building trimestrale\\n\\n---\\n\\n## 📅 Timeline Implementazione\\n\\n**Q1 2024 (Gen-Mar):**\\n- Ristrutturazione veranda\\n- Launch app delivery\\n- Assunzione sous chef\\n\\n**Q2 2024 (Apr-Giu):**\\n- Completamento team\\n- Certificazione bio\\n- Campagna marketing\\n\\n**Q3 2024 (Lug-Set):**\\n- Eventi estivi\\n- Partnership locali\\n- Ottimizzazione processi\\n\\n**Q4 2024 (Ott-Dic):**\\n- Bilanci e analisi\\n- Pianificazione 2025\\n- Bonus staff\\n\\n---\\n\\n## 🎉 Eventi Speciali Pianificati\\n\\n- **Febbraio:** San Valentino Romantic Dinner\\n- **Marzo:** Festa della Donna - Cena Pink\\n- **Aprile:** Pasqua - Brunch Famiglia\\n- **Maggio:** Festa della Mamma\\n- **Giugno:** Notte Bianca Topolinia\\n- **Luglio:** Festival Estate - Aperitivi\\n- **Agosto:** Sagra del Pesce\\n- **Settembre:** Vendemmia - Cena Wine\\n- **Ottobre:** Halloween per Bambini\\n- **Novembre:** Festa Castagne\\n- **Dicembre:** Cenone Capodanno\\n\\n---\\n\\n*Sono determinato a rendere \\\"Da Paperino\\\" il ristorante numero 1 di Topolinia! 🦆🍝*\\n\\n**Contatti Business:**\\n- Email: paperino@ristorantedapaperino.com\\n- Tel: +39 0123 456789\\n- Website: www.ristorantedapaperino.it\",\n  \"tags\": [\"business\", \"ristorante\", \"strategia\", \"finanza\", \"marketing\"],\n  \"is_pinned\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Paperino Note 2 - Ricette Segrete",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Paperino Note 2 - Secret recipes created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Secret recipes note validation', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData.title).to.contain('Ricette');",
+                  "        pm.expect(jsonData.title).to.contain('Segrete');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Recipe content includes ingredients', function () {",
+                  "        pm.expect(jsonData.content).to.contain('Ingredienti');",
+                  "        pm.expect(jsonData.content).to.contain('SEGRETO');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Cooking tags present', function () {",
+                  "        pm.expect(jsonData.tags).to.include('ricette');",
+                  "        pm.expect(jsonData.tags).to.include('cucina');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('paperino_note2_id', jsonData.id);",
+                  "    console.log('Paperino Note 2 (Ricette Segrete) created with ID:', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Le Mie Ricette Segrete - Top Secret! 🤫\",\n  \"content\": \"Le ricette che hanno reso famoso il mio ristorante - RISERVATO!\\n\\n## 🍝 PASTA ALLA PAPERINO (Piatto Signature)\\n*La ricetta più richiesta del ristorante!*\\n\\n**Ingredienti (4 persone):**\\n- 400g spaghetti di grano duro\\n- 300g pancetta di Parma (taglio spesso)\\n- 4 uova fresche (tuorli + 1 intero)\\n- 150g Pecorino Romano DOP\\n- 100g Parmigiano Reggiano 24 mesi\\n- Pepe nero macinato fresco\\n- 1 bicchiere vino bianco secco\\n- Olio EVO (il migliore!)\\n\\n**Il SEGRETO:**\\n🔥 La pancetta va rosolata SENZA olio fino a diventare croccante\\n🥚 Le uova vanno sbattute a temperatura ambiente con i formaggi\\n⏰ Timing perfetto: pasta al dente + mantecatura velocissima\\n🌶️ Pepe nero: macinarli al momento, non quello pre-macinato!\\n\\n**Preparazione:**\\n1. Tagliare pancetta a cubetti (1cm)\\n2. Rosolare senza grassi fino a doratura\\n3. Sfumare con vino e farlo evaporare\\n4. Sbattere uova con formaggi e pepe\\n5. Cuocere pasta 1 min in meno del tempo indicato\\n6. Manteccare tutto insieme FUORI dal fuoco\\n7. Aggiungere acqua di cottura se serve\\n\\n*Servire immediatamente in piatti caldi!*\\n\\n---\\n\\n## 🐟 BRANZINO IN CROSTA DI SALE (Specialità del Venerdì)\\n\\n**Ingredienti:**\\n- 1 branzino fresco 1.5kg (occhi chiari!)\\n- 2kg sale grosso marino\\n- 4 albumi\\n- Rosmarino, timo, alloro\\n- Limoni biologici\\n- Olio EVO finale\\n\\n**IL MIO TRUCCO SEGRETO:**\\n🧂 Mescolare il sale con albumi e erbe aromatiche\\n🐟 NON squamare il pesce (la pelle protegge)\\n🔥 Forno a 200°C per esattamente 35 minuti\\n⏱️ Lasciar riposare 10 min prima di rompere la crosta\\n\\n*Il pesce viene perfetto: umido dentro, saporito fuori!*\\n\\n---\\n\\n## 🍰 TIRAMISÙ DELLA NONNA PAPERA (Dessert più amato)\\n\\n**Ingredienti (8 porzioni):**\\n- 500g mascarpone freschissimo\\n- 6 uova (solo tuorli per la crema)\\n- 150g zucchero semolato\\n- 300ml caffè espresso forte (freddo)\\n- 3 cucchiai Marsala secco\\n- 300g savoiardi artigianali\\n- Cacao amaro olandese\\n- Cioccolato fondente 70%\\n\\n**SEGRETO DELLA NONNA:**\\n☕ Caffè + marsala + 1 cucchiaino zucchero per bagnare\\n🥄 Montare i tuorli con zucchero fino a sbiancamento\\n🧀 Mascarpone a temperatura ambiente\\n❄️ Riposo minimo 6 ore (meglio 24)\\n🍫 Spolverare cacao solo al momento del servizio\\n\\n**La Tecnica:**\\n1. Preparare caffè e farlo raffreddare\\n2. Montare tuorli e zucchero (10 minuti)\\n3. Incorporare mascarpone delicatamente\\n4. Bagnare savoiardi velocemente\\n5. Stratificare: savoiardi + crema + savoiardi + crema\\n6. Riposare in frigo coperto\\n\\n*Il segreto è la pazienza: più riposa, più è buono!*\\n\\n---\\n\\n## 🍕 PIZZA MARGHERITA PERFETTA (Forno a Legna)\\n\\n**Impasto (24h lievitazione):**\\n- 1kg farina \\\"00\\\" Manitoba\\n- 650ml acqua tiepida\\n- 20g sale marino\\n- 3g lievito di birra fresco\\n- 30ml olio EVO\\n\\n**Condimento:**\\n- Pomodori San Marzano DOP\\n- Mozzarella di bufala campana\\n- Basilico fresco\\n- Olio EVO finale\\n- Sale fino q.b.\\n\\n**SEGRETI DEL PIZZAIOLO:**\\n🕐 Impasto: lavorare 15 min, riposo 2h, poi frigo 24h\\n🔥 Forno a 450°C (temperatura critica!)\\n⏱️ Cottura: 90 secondi, girare a metà\\n🧀 Mozzarella: aggiungere a metà cottura\\n🌿 Basilico: sempre dopo la cottura\\n\\n---\\n\\n## 🥘 OSSO BUCO ALLA MILANESE (Piatto della Domenica)\\n\\n**Ingredienti:**\\n- 4 ossibuchi di vitello (3cm spessore)\\n- Farina 00 per infarinare\\n- Soffritto: sedano, carota, cipolla\\n- 500ml brodo di carne\\n- 200ml vino bianco secco\\n- Concentrato pomodoro\\n- Gremolada (limone+aglio+prezzemolo)\\n\\n**LA MIA TECNICA:**\\n🥩 Infarinare e rosolare a fuoco vivace\\n🍷 Sfumare con vino (tutto!)\\n🔥 Cuocere a fuoco bassissimo 2 ore\\n🍋 Gremolada fresca alla fine\\n\\n*Accompagnare con risotto alla milanese!*\\n\\n---\\n\\n## 📝 Note Importanti\\n\\n**Fornitori di Fiducia:**\\n- Pesce: Mercato del Porto (Mario)\\n- Carne: Macelleria Gastone\\n- Verdure: Orto di Nonna Papera\\n- Formaggi: Caseificio delle Alpi\\n\\n**Temperature Critiche:**\\n- Frigo ingredienti: 2-4°C\\n- Forno pizza: 450°C\\n- Olio frittura: 180°C\\n- Servizio piatti: 65°C\\n\\n**Porzioni Standard:**\\n- Primi: 120g pasta/persona\\n- Secondi: 180g carne/persona\\n- Contorni: 150g/persona\\n- Dolci: 120g/persona\\n\\n---\\n\\n⚠️ **ATTENZIONE: QUESTE RICETTE SONO TOP SECRET!**\\n*Non condividere con la concorrenza! Sono il cuore del successo del ristorante!*\\n\\n🦆 *Paperino - Chef & Proprietario*\\n📞 *Per emergenze culinarie: +39 0123 456789*\",\n  \"tags\": [\"ricette\", \"cucina\", \"segreti\", \"ristorante\", \"chef\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Paperino Note 3 - Fornitori e Contatti",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Paperino Note 3 - Suppliers note created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Business contacts note structure', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData.title).to.contain('Fornitori');",
+                  "        pm.expect(jsonData.title).to.contain('Contatti');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Suppliers content validation', function () {",
+                  "        pm.expect(jsonData.content).to.contain('Tel:');",
+                  "        pm.expect(jsonData.content).to.contain('Email:');",
+                  "        pm.expect(jsonData.content).to.contain('PESCE');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Business tags validation', function () {",
+                  "        pm.expect(jsonData.tags).to.include('fornitori');",
+                  "        pm.expect(jsonData.tags).to.include('business');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('paperino_note3_id', jsonData.id);",
+                  "    console.log('Paperino Note 3 (Fornitori) created with ID:', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Fornitori e Contatti Business - Ristorante\",\n  \"content\": \"Lista completa dei fornitori e contatti professionali per il ristorante:\\n\\n## 🐟 PESCE E FRUTTI DI MARE\\n\\n### Mercato del Porto - Mario Pescatore\\n**Contatto:** Mario Bianchi\\n**Tel:** +39 0123 456701\\n**Email:** mario@mercatoporto.it\\n**Orari:** 5:00-13:00 (Lun-Sab)\\n**Specialità:** Pesce fresco giornaliero, crostacei\\n**Consegna:** Martedì, Giovedì, Sabato (ore 7:00)\\n**Pagamento:** 30 giorni fine mese\\n**Note:** Miglior rapporto qualità/prezzo. Avvisare il giorno prima per ordini speciali.\\n\\n### Adriatico Fish Company\\n**Tel:** +39 0123 456702\\n**Email:** ordini@adriaticofish.com\\n**Specialità:** Pesce congelato, emergenze\\n**Consegna:** 24h su richiesta\\n**Note:** Solo per urgenze, più costoso\\n\\n---\\n\\n## 🥩 CARNE E SALUMI\\n\\n### Macelleria Gastone\\n**Proprietario:** Gastone Rossi\\n**Tel:** +39 0123 456703\\n**Indirizzo:** Via della Carne, 15\\n**Orari:** 7:00-19:00 (Lun-Sab)\\n**Specialità:** Carne di vitello, agnello, maiale\\n**Qualità:** Filiera controllata, allevamenti locali\\n**Consegna:** Lunedì, Mercoledì, Venerdì\\n**Sconto:** 15% su ordini > €200\\n\\n### Salumificio delle Colline\\n**Tel:** +39 0123 456704\\n**Specialità:** Prosciutti, salami, pancetta\\n**Ordine minimo:** €150\\n**Consegna:** Settimanale (Mercoledì)\\n\\n---\\n\\n## 🧀 LATTICINI E FORMAGGI\\n\\n### Caseificio delle Alpi\\n**Referente:** Sig.ra Anna Formaggini\\n**Tel:** +39 0123 456705\\n**Email:** anna@alpicaseificio.it\\n**Specialità:** Formaggi DOP, burro, panna\\n**Prodotti TOP:** Gorgonzola, Taleggio, Mascarpone\\n**Consegna:** Bi-settimanale (Mar, Ven)\\n**Condizioni:** Pagamento alla consegna\\n\\n### Centrale del Latte\\n**Tel:** +39 0123 456706\\n**Prodotti:** Latte, yogurt, mozzarella\\n**Consegna:** Quotidiana (6:00)\\n**Contratto:** Annuale con sconti progressivi\\n\\n---\\n\\n## 🥬 FRUTTA E VERDURA\\n\\n### Orto di Nonna Papera\\n**Contatto:** Nonna Papera 💚\\n**Tel:** +39 0123 456707\\n**Tipo:** Biologico certificato\\n**Prodotti:** Verdure di stagione, erbe aromatiche\\n**Consegna:** 3 volte/settimana\\n**Prezzo:** Preferenziale (amicizia di famiglia)\\n**Note:** Qualità eccezionale, zero km\\n\\n### Mercato Ortofrutticolo\\n**Referente:** Giovanni Verde\\n**Tel:** +39 0123 456708\\n**Orari:** 4:00-12:00 tutti i giorni\\n**Prodotti:** Frutta esotica, verdure fuori stagione\\n**Pagamento:** Contanti o settimanale\\n\\n---\\n\\n## 🍷 VINI E BEVANDE\\n\\n### Enoteca \\\"Il Calice d'Oro\\\"\\n**Proprietario:** Sommelier Roberto Rosso\\n**Tel:** +39 0123 456709\\n**Email:** roberto@calicedoro.wine\\n**Specialità:** Vini locali, champagne, distillati\\n**Servizi:** Consulenza abbinamenti, degustazioni\\n**Sconto:** 20% su ordini ristoranti\\n**Consegna:** Su appuntamento\\n\\n### Distributore Bevande SpA\\n**Tel:** +39 0123 456710\\n**Prodotti:** Acque, bibite, birre\\n**Consegna:** Settimanale automatica\\n**Contratto:** Comodato d'uso frigoriferi\\n\\n---\\n\\n## 🏪 ALIMENTARI E DISPENSA\\n\\n### Alimentari \\\"Tutto Gusto\\\"\\n**Tel:** +39 0123 456711\\n**Prodotti:** Pasta, riso, conserve, spezie\\n**Marchi:** De Cecco, Barilla, Mutti\\n**Consegna:** Bi-settimanale\\n**Pagamento:** 60 giorni fine mese\\n\\n### Cash & Carry Metro\\n**Tel:** +39 0123 456712\\n**Tipo:** Acquisti self-service\\n**Vantaggi:** Prezzi all'ingrosso, vasta scelta\\n**Orari:** 6:00-21:00 (Lun-Sab)\\n**Note:** Per emergenze e stock grandi quantità\\n\\n---\\n\\n## 🍞 PANE E DOLCI\\n\\n### Panificio Gastone\\n**Tel:** +39 0123 456713\\n**Prodotti:** Pane, focacce, dolci\\n**Qualità:** Lievitazione naturale\\n**Consegna:** Quotidiana (6:30)\\n**Specialità:** Pane di Altamura, grissini\\n\\n---\\n\\n## 🧽 PULIZIE E MATERIALI\\n\\n### Deter Professional\\n**Tel:** +39 0123 456714\\n**Prodotti:** Detergenti HACCP, attrezzature\\n**Consegna:** Mensile\\n**Servizi:** Corsi formazione igiene\\n\\n### Carta & Plastica Eco\\n**Tel:** +39 0123 456715\\n**Prodotti:** Piatti, bicchieri, tovaglioli biodegradabili\\n**Trend:** Sostenibilità ambientale\\n\\n---\\n\\n## 🔧 ASSISTENZA TECNICA\\n\\n### Frigoriferi Industriali - TecnoFrigo\\n**Tel:** +39 0123 456716\\n**Servizi:** Manutenzione, riparazioni urgenti\\n**Disponibilità:** 24/7 per emergenze\\n**Contratto:** Manutenzione semestrale\\n\\n### Impianti Gas - Sicurgas\\n**Tel:** +39 0123 456717\\n**Servizi:** Controlli sicurezza, certificazioni\\n**Frequenza:** Controlli annuali obbligatori\\n\\n---\\n\\n## 💼 SERVIZI PROFESSIONALI\\n\\n### Commercialista - Dott. Conti\\n**Tel:** +39 0123 456718\\n**Email:** conti@studiocommerciale.it\\n**Servizi:** Contabilità, dichiarazioni, consulenza\\n**Riunioni:** Mensili per bilanci\\n\\n### Consulente HACCP - Dott.ssa Igiene\\n**Tel:** +39 0123 456719\\n**Servizi:** Piani autocontrollo, formazione\\n**Frequenza:** Trimestrale\\n\\n### Assicurazioni - Agenzia Sicura\\n**Tel:** +39 0123 456720\\n**Polizze:** Locale, attrezzature, responsabilità civile\\n**Scadenza:** Novembre 2024\\n\\n---\\n\\n## 📱 CONTATTI EMERGENZA\\n\\n- **Vigili del Fuoco:** 115\\n- **Pronto Soccorso:** 118\\n- **Carabinieri:** 112\\n- **Gas (emergenze):** 800 900 999\\n- **ENEL (blackout):** 803 500\\n- **Acquedotto:** 800 130 335\\n\\n---\\n\\n## 📋 PROMEMORIA IMPORTANTI\\n\\n### Scadenze Contratti\\n- Affitto locale: 31/12/2024\\n- Assicurazione: 15/11/2024\\n- Contratto gas: 28/02/2025\\n- SIAE: 31/03/2024\\n\\n### Controlli Obbligatori\\n- HACCP: Ogni 3 mesi\\n- Antincendio: Annuale\\n- Caldaia: Semestrale\\n- Estintori: Annuale\\n\\n*Tenere sempre aggiornato questo elenco! È vitale per il business! 🦆*\\n\\n**Ultimo aggiornamento:** Dicembre 2023\\n**Prossima revisione:** Marzo 2024\",\n  \"tags\": [\"fornitori\", \"contatti\", \"business\", \"ristorante\", \"emergenze\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        },
+        {
+          "name": "Paperino Note 4 - Idee Menu Estivo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Paperino Note 4 - Summer menu created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Summer menu note structure', function () {",
+                  "        pm.expect(jsonData).to.have.property('id');",
+                  "        pm.expect(jsonData).to.have.property('title');",
+                  "        pm.expect(jsonData).to.have.property('can_edit');",
+                  "        pm.expect(jsonData.can_edit).to.be.true;",
+                  "        pm.expect(jsonData.title).to.contain('Menu');",
+                  "        pm.expect(jsonData.title).to.contain('Estivo');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Summer menu content validation', function () {",
+                  "        pm.expect(jsonData.content).to.contain('estate');",
+                  "        pm.expect(jsonData.content).to.contain('menu');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Menu tags validation', function () {",
+                  "        pm.expect(jsonData.tags).to.include('menu');",
+                  "        pm.expect(jsonData.tags).to.include('estate');",
+                  "    });",
+                  "    ",
+                  "    pm.collectionVariables.set('paperino_note4_id', jsonData.id);",
+                  "    console.log('Paperino Note 4 (Menu Estivo) created with ID:', jsonData.id);",
+                  "    console.log('🎉 All Paperino notes created successfully!');",
+                  "    console.log('📝 Total notes created: 11 (4 Pippo + 3 Pluto + 4 Paperino)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Idee Creative per Menu Estivo 2024\",\n  \"content\": \"Raccolta di idee innovative per il menu estivo del ristorante:\\n\\n## 🌞 CONCEPT ESTATE: \\\"Sapori di Mare e Montagna\\\"\\n\\n*Tema: Unire la freschezza del mare con i sapori autentici di montagna*\\n\\n---\\n\\n## 🥗 ANTIPASTI FRESCHI\\n\\n### \\\"Crudo di Ricciola con Gel di Basilico\\\"\\n**Descrizione:** Ricciola marinata in olio e limone, gel di basilico fresco, pomodorini confit\\n**Prezzo stimato:** €18\\n**Difficoltà:** ⭐⭐⭐\\n**Note:** Perfetto per Instagram! Molto scenografico\\n\\n### \\\"Burrata Pugliese su Letto di Rucola Selvatica\\\"\\n**Accompagnamento:** Fichi caramellati, noci tostate, miele millefiori\\n**Prezzo stimato:** €16\\n**Difficoltà:** ⭐⭐\\n**Stagionalità:** Giugno-Settembre\\n\\n### \\\"Carpaccio di Manzo con Scaglie di Pecorino\\\"\\n**Twist:** Servito su pietra ollare fredda\\n**Guarnizione:** Rucola, pomodorini, olio al tartufo\\n**Prezzo stimato:** €20\\n**Note:** Effetto \\\"wow\\\" garantito!\\n\\n---\\n\\n## 🍝 PRIMI PIATTI ESTIVI\\n\\n### \\\"Spaghetti alle Vongole Veraci 2.0\\\"\\n**Innovazione:** Serviti in ciotola di parmigiano\\n**Ingredienti:** Vongole del golfo, prezzemolo, aglio, vino bianco\\n**Prezzo stimato:** €22\\n**Difficulty:** ⭐⭐⭐⭐\\n**Tempo prep:** 15 minuti\\n\\n### \\\"Risotto all'Amarone con Radicchio di Treviso\\\"\\n**Stagione:** Tutto l'anno, ma perfetto d'estate\\n**Finitura:** Gorgonzola dolce, noci\\n**Prezzo stimato:** €19\\n**Wine pairing:** Amarone della Valpolicella\\n\\n### \\\"Linguine al Pesto di Pistacchi\\\"\\n**Origine:** Ispirazione siciliana\\n**Ingredienti:** Pistacchi di Bronte, ricotta salata, pomodorini\\n**Prezzo stimato:** €17\\n**Vegetariano:** ✅\\n**Allergie:** Frutta a guscio\\n\\n### \\\"Gnocchi di Ricotta con Pomodoro Fresco\\\"\\n**Tecnica:** Gnocchi fatti in casa\\n**Condimento:** Pomodoro crudo, basilico, mozzarella di bufala\\n**Prezzo stimato:** €16\\n**Tempo cottura:** 3 minuti\\n\\n---\\n\\n## 🐟 SECONDI DI PESCE\\n\\n### \\\"Branzino in Crosta di Patate\\\"\\n**Presentazione:** Filetto avvolto in sfoglie di patate\\n**Contorno:** Verdure grigliate, salsa verde\\n**Prezzo stimato:** €26\\n**Tecnica:** Cottura al vapore + finitura in padella\\n\\n### \\\"Tonno Scottato con Sesamo\\\"\\n**Stile:** Fusion italiano-giapponese\\n**Accompagnamento:** Wakame, edamame, salsa teriyaki\\n**Prezzo stimato:** €28\\n**Target:** Clientela giovane e trendy\\n\\n### \\\"Orata al Sale Rosa dell'Himalaya\\\"\\n**Innovazione:** Cottura al sale colorato\\n**Guarnizione:** Limoni confit, olio alle erbe\\n**Prezzo stimato:** €24\\n**Presentazione:** Rottura della crosta al tavolo\\n\\n---\\n\\n## 🥩 SECONDI DI CARNE\\n\\n### \\\"Tagliata di Manzo su Pietra Lavica\\\"\\n**Cottura:** Al sangue, al tavolo del cliente\\n**Condimenti:** Sale grosso, olio, rosmarino\\n**Contorno:** Rucola e grana\\n**Prezzo stimato:** €32\\n**Show cooking:** Effetto spettacolare\\n\\n### \\\"Agnello alle Erbe di Montagna\\\"\\n**Marinatura:** 24h in erbe fresche\\n**Cottura:** Bassa temperatura\\n**Accompagnamento:** Patate al timo, ratatouille\\n**Prezzo stimato:** €29\\n\\n### \\\"Anatra all'Arancia\\\"\\n**Stile:** Classico rivisitato\\n**Salsa:** Riduzione di porto e arancia\\n**Contorno:** Cavolo rosso brasato\\n**Prezzo stimato:** €31\\n**Tempo prep:** 2 ore\\n\\n---\\n\\n## 🍰 DOLCI DELLA CASA\\n\\n### \\\"Tiramisù Decostruito\\\"\\n**Presentazione:** In bicchiere di vetro trasparente\\n**Layers:** Visibili e Instagram-friendly\\n**Innovazione:** Savoiardi croccanti a parte\\n**Prezzo stimato:** €8\\n\\n### \\\"Panna Cotta ai Frutti di Bosco\\\"\\n**Base:** Panna italiana, vaniglia del Madagascar\\n**Topping:** Frutti di bosco freschi, coulis\\n**Prezzo stimato:** €7\\n**Allergie:** Lattosio\\n\\n### \\\"Gelato Artigianale della Casa\\\"\\n**Gusti rotazione:** Fiordilatte, pistacchio, limone\\n**Produzione:** Giornaliera\\n**Servizio:** Con cialde fatte in casa\\n**Prezzo stimato:** €6\\n\\n### \\\"Affogato al Caffè\\\"\\n**Combinazione:** Gelato vanilla + espresso caldo\\n**Optional:** Goccia di amaretto\\n**Prezzo stimato:** €5\\n**Trend:** Perfetto per dopo cena\\n\\n---\\n\\n## 🍹 BEVANDE SPECIALI ESTATE\\n\\n### Aperitivi Signature\\n**\\\"Spritz Paperino\\\"**\\n- Prosecco, Aperol, soda, scorza d'arancia\\n- Servito con olive ascolane mini\\n- Prezzo: €8\\n\\n**\\\"Negroni Sbagliato del Chef\\\"**\\n- Gin artigianale, Campari, vermut rosso\\n- Guarnizione: scorza di pompelmo\\n- Prezzo: €10\\n\\n### Cocktail Analcolici\\n**\\\"Virgin Mojito ai Lamponi\\\"**\\n**\\\"Limonata della Nonna\\\"**\\n**\\\"Acqua Aromatizzata Cetriolo-Menta\\\"**\\n\\n---\\n\\n## 📊 ANALISI COSTI E MARGINI\\n\\n### Target Marginalità\\n- Antipasti: 65-70%\\n- Primi: 60-65%\\n- Secondi: 55-60%\\n- Dolci: 70-75%\\n- Bevande: 75-80%\\n\\n### Ingredienti Critici\\n- Pesce fresco: Prezzo variabile\\n- Carne premium: Margini più bassi\\n- Verdure bio: Costo maggiore ma valore aggiunto\\n\\n---\\n\\n## 🎯 STRATEGIA MENU\\n\\n### Piatti \\\"Anchor\\\" (Alto Margine)\\n1. Tiramisù decostruito\\n2. Linguine al pesto di pistacchi\\n3. Burrata con fichi\\n\\n### Piatti \\\"Traffic Driver\\\" (Richiamo Clientela)\\n1. Tagliata su pietra lavica\\n2. Branzino in crosta di sale\\n3. Spaghetti alle vongole 2.0\\n\\n### Piatti \\\"Signature\\\" (Identità Ristorante)\\n1. Pasta alla Paperino (sempre nel menu)\\n2. Osso buco della domenica\\n3. Tiramisù della nonna\\n\\n---\\n\\n## 📅 PLANNING IMPLEMENTAZIONE\\n\\n**Fase 1 (Maggio):**\\n- Test 3 nuovi antipasti\\n- Staff training su presentazioni\\n- Foto professionali piatti\\n\\n**Fase 2 (Giugno):**\\n- Lancio menu estivo completo\\n- Campagna social media\\n- Training camerieri su descrizioni\\n\\n**Fase 3 (Luglio):**\\n- Analisi vendite\\n- Ottimizzazione piatti meno venduti\\n- Feedback clienti\\n\\n**Fase 4 (Agosto):**\\n- Menu definitivo\\n- Calcolo costi finali\\n- Preparazione menu autunnale\\n\\n---\\n\\n## 💡 IDEE FUTURE\\n\\n### Tendenze da Monitorare\\n- Cucina plant-based\\n- Fermentazioni artigianali\\n- Ingredienti a km zero\\n- Presentazioni minimali\\n- Sostenibilità ambientale\\n\\n### Collaborazioni Possibili\\n- Chef ospiti\\n- Produttori locali\\n- Sommelier per abbinamenti\\n- Food blogger per recensioni\\n\\n---\\n\\n*Queste idee rappresentano la mia visione per portare il ristorante al livello successivo! 🦆👨‍🍳*\\n\\n**Note personali:**\\n- Testare sempre i piatti prima del lancio\\n- Considerare sempre i costi\\n- Ascoltare feedback dello staff\\n- Monitorare tendenze food&beverage\\n\\n**Prossima revisione:** Aprile 2024\",\n  \"tags\": [\"menu\", \"estate\", \"innovazione\", \"cucina\", \"creatività\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notes/",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Note Sharing - Individual & All Users",
+      "item": [
+        {
+          "name": "Pippo shares Avventure Topolinia with Pluto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Sharing request status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Sharing response is array of shares', function () {",
+                  "        pm.expect(jsonData).to.be.an('array');",
+                  "        pm.expect(jsonData.length).to.be.greaterThan(0);",
+                  "    });",
+                  "    ",
+                  "    pm.test('Each share has required properties', function () {",
+                  "        jsonData.forEach(function(share) {",
+                  "            pm.expect(share).to.have.property('id');",
+                  "            pm.expect(share).to.have.property('note_id');",
+                  "            pm.expect(share).to.have.property('shared_with_username');",
+                  "            pm.expect(share).to.have.property('permission_level');",
+                  "        });",
+                  "    });",
+                  "    ",
+                  "    pm.test('Share with pluto created', function () {",
+                  "        var plutoShare = jsonData.find(s => s.shared_with_username === 'pluto');",
+                  "        pm.expect(plutoShare).to.not.be.undefined;",
+                  "        pm.expect(plutoShare.permission_level).to.equal('read');",
+                  "    });",
+                  "    ",
+                  "    console.log('✅ Pippo shared note with Pluto successfully');",
+                  "    console.log('📋 Share details:', JSON.stringify(jsonData, null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{pippo_note1_id}}\",\n  \"shared_with_usernames\": [\"pluto\"],\n  \"permission_level\": \"read\",\n  \"message\": \"Le mie avventure a Topolinia!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        },
+        {
+          "name": "Pluto shares Addestramento Cani with Paperino",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pluto_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{pluto_note1_id}}\",\n  \"shared_with_usernames\": [\"paperino\"],\n  \"permission_level\": \"read\",\n  \"message\": \"I miei consigli per l'addestramento!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        },
+        {
+          "name": "Paperino shares Ricette Segrete with Pippo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{paperino_note1_id}}\",\n  \"shared_with_usernames\": [\"pippo\"],\n  \"permission_level\": \"write\",\n  \"message\": \"Le mie ricette segrete - puoi anche modificarle!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        },
+        {
+          "name": "Pippo shares Lista Spesa with Paperino",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{pippo_note1_id}}\",\n  \"shared_with_usernames\": [\"paperino\"],\n  \"permission_level\": \"read\",\n  \"message\": \"Condivido la mia lista della spesa con te!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        },
+        {
+          "name": "Pippo shares Avventure Topolinia with ALL USERS",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('ALL USERS sharing - Status 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Multiple shares created (ALL USERS)', function () {",
+                  "        pm.expect(jsonData).to.be.an('array');",
+                  "        pm.expect(jsonData.length).to.equal(2); // pluto + paperino",
+                  "    });",
+                  "    ",
+                  "    pm.test('All expected users are shared with', function () {",
+                  "        var usernames = jsonData.map(s => s.shared_with_username);",
+                  "        pm.expect(usernames).to.include('pluto');",
+                  "        pm.expect(usernames).to.include('paperino');",
+                  "    });",
+                  "    ",
+                  "    pm.test('All shares have read permission', function () {",
+                  "        jsonData.forEach(function(share) {",
+                  "            pm.expect(share.permission_level).to.equal('read');",
+                  "            pm.expect(share).to.have.property('message');",
+                  "        });",
+                  "    });",
+                  "    ",
+                  "    pm.test('Pippo note shared with all Disney characters', function () {",
+                  "        pm.expect(jsonData.every(s => s.note_id === pm.collectionVariables.get('pippo_note1_id'))).to.be.true;",
+                  "    });",
+                  "    ",
+                  "    console.log('🎉 Pippo successfully shared with ALL USERS!');",
+                  "    console.log('👥 Shared with:', jsonData.map(s => s.shared_with_username).join(', '));",
+                  "    console.log('📝 Message sent:', jsonData[0].message || 'No message');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{pippo_note1_id}}\",\n  \"shared_with_usernames\": [\"pluto\", \"paperino\"],\n  \"permission_level\": \"read\",\n  \"message\": \"Le mie avventure a Topolinia - condivido con tutti!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        },
+        {
+          "name": "Pluto shares Addestramento Cani with ALL USERS",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pluto_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Pluto shared note with all users successfully', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{pluto_note1_id}}\",\n  \"shared_with_usernames\": [\"pippo\", \"paperino\"],\n  \"permission_level\": \"read\",\n  \"message\": \"I miei trucchi per addestrare i cani - utili per tutti!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        },
+        {
+          "name": "Paperino shares Ricette Segrete with ALL USERS",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Paperino shared note with all users successfully', function () {",
+                  "        pm.response.to.have.status(201);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note_id\": \"{{paperino_note1_id}}\",\n  \"shared_with_usernames\": [\"pippo\", \"pluto\"],\n  \"permission_level\": \"write\",\n  \"message\": \"Le mie ricette segrete della famiglia Duck - condivido con tutti voi!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sharing/",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Test API Endpoints",
+      "item": [
+        {
+          "name": "Get All Notes (Pippo)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Notes listing - Status 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    pm.test('Notes response has pagination structure', function () {",
+                  "        pm.expect(jsonData).to.have.property('items');",
+                  "        pm.expect(jsonData).to.have.property('total');",
+                  "        pm.expect(jsonData).to.have.property('page');",
+                  "        pm.expect(jsonData).to.have.property('per_page');",
+                  "    });",
+                  "    ",
+                  "    pm.test('Pippo can see his own notes and shared notes', function () {",
+                  "        pm.expect(jsonData.items).to.be.an('array');",
+                  "        pm.expect(jsonData.total).to.be.greaterThan(0);",
+                  "    });",
+                  "    ",
+                  "    pm.test('Notes have required properties', function () {",
+                  "        if (jsonData.items.length > 0) {",
+                  "            jsonData.items.forEach(function(note) {",
+                  "                pm.expect(note).to.have.property('id');",
+                  "                pm.expect(note).to.have.property('title');",
+                  "                pm.expect(note).to.have.property('is_owned');",
+                  "                pm.expect(note).to.have.property('is_shared');",
+                  "                pm.expect(note).to.have.property('can_edit');",
+                  "            });",
+                  "        }",
+                  "    });",
+                  "    ",
+                  "    pm.test('Pippo has both owned and shared notes', function () {",
+                  "        var ownedNotes = jsonData.items.filter(n => n.is_owned);",
+                  "        var sharedNotes = jsonData.items.filter(n => n.is_shared && !n.is_owned);",
+                  "        ",
+                  "        pm.expect(ownedNotes.length).to.be.greaterThan(0);",
+                  "        console.log(`📝 Pippo owns ${ownedNotes.length} notes`);",
+                  "        console.log(`🤝 Pippo has access to ${sharedNotes.length} shared notes`);",
+                  "        console.log(`📊 Total accessible notes: ${jsonData.total}`);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notes/?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["notes", ""],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Notes by Tag (ricette)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/notes?q=ricette",
+              "host": ["{{base_url}}"],
+              "path": ["search", "notes"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "ricette"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Shared Notes (Pluto)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pluto_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/sharing/shared-with-me?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["sharing", "shared-with-me"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tag Suggestions",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('pippo_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/tags/suggest?q=cucina",
+              "host": ["{{base_url}}"],
+              "path": ["search", "tags", "suggest"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "cucina"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Search Stats",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('access_token', pm.collectionVariables.get('paperino_token'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/stats",
+              "host": ["{{base_url}}"],
+              "path": ["search", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

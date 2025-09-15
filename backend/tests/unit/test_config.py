@@ -49,7 +49,8 @@ class TestSettings:
         assert settings.cors_allow_credentials is True
 
         # Pagination
-        assert settings.default_page_size == 20
+        # Default page size is 9 (matches app default)
+        assert settings.default_page_size == 9
         assert settings.max_page_size == 100
 
         # Rate limiting

@@ -1,6 +1,6 @@
 """Note model for user content."""
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import HttpUrl
@@ -116,7 +116,7 @@ class Note(BaseModel):
     def increment_view_count(self) -> None:
         """Increment the view count and update last viewed timestamp."""
         self.view_count += 1
-        self.last_viewed_at = datetime.utcnow()
+        self.last_viewed_at = datetime.now(timezone.utc)
 
     def is_owned_by(self, user_id: uuid.UUID) -> bool:
         """Check if this note is owned by the specified user."""
@@ -126,7 +126,8 @@ class Note(BaseModel):
         """Extract potential hyperlinks from note content using regex."""
         import re
 
-        url_pattern = r'https?://[^\s<>":' "'" "`|(){}[\]]*"
+        # One raw string; escape characters inside the character class to avoid SyntaxWarning
+        url_pattern = r"https?://[^\s<>\":'`|(){}\[\]]*"
         urls = re.findall(url_pattern, self.content, re.IGNORECASE)
         return list(set(urls))
 

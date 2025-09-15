@@ -5,7 +5,7 @@ Shared response schemas - pagination, errors etc
 from datetime import datetime
 from typing import Any, Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 T = TypeVar("T")
 
@@ -47,8 +47,8 @@ class ErrorResponse(BaseModel):
     details: Optional[dict[str, Any]] = Field(default=None, description="Additional error details")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "error": "ValidationError",
                 "message": "Username too short",
@@ -56,6 +56,7 @@ class ErrorResponse(BaseModel):
                 "timestamp": "2025-09-13T17:23:45Z",
             }
         }
+    )
 
 
 class SuccessResponse(BaseModel):
@@ -65,14 +66,15 @@ class SuccessResponse(BaseModel):
     message: str = Field(description="Success message")
     data: Optional[dict[str, Any]] = Field(default=None, description="Additional response data")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Operation completed successfully",
                 "data": {"id": "123e4567-e89b-12d3-a456-426614174000"},
             }
         }
+    )
 
 
 class HealthCheckResponse(BaseModel):
@@ -83,8 +85,8 @@ class HealthCheckResponse(BaseModel):
     version: str = Field(description="Application version")
     checks: dict[str, dict[str, Any]] = Field(description="Individual component health checks")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "healthy",
                 "timestamp": "2025-09-13T10:30:00Z",
@@ -95,3 +97,4 @@ class HealthCheckResponse(BaseModel):
                 },
             }
         }
+    )
