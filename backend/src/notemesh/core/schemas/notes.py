@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl, validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, ConfigDict
 
 from .common import PaginationResponse
 
@@ -20,13 +20,14 @@ class NoteCreate(BaseModel):
 
     title: str = Field(min_length=1, max_length=200, description="Note title")
     content: str = Field(min_length=1, description="Note content (supports Markdown)")
-    tags: List[str] = Field(default_factory=list, max_items=20, description="Note tags")
+    tags: List[str] = Field(default_factory=list, max_length=20, description="Note tags")
     hyperlinks: List[HttpUrl] = Field(
-        default_factory=list, max_items=50, description="External hyperlinks"
+        default_factory=list, max_length=50, description="External hyperlinks"
     )
     is_public: bool = Field(default=False, description="Whether note is publicly visible")
 
-    @validator("tags")
+    @field_validator("tags")
+    @classmethod
     def validate_tags(cls, v):
         """Validate tag format and uniqueness."""
         if not v:
@@ -46,15 +47,16 @@ class NoteCreate(BaseModel):
 
         return [tag.lower() for tag in v]  # Normalize to lowercase
 
-    @validator("content")
+    @field_validator("content")
+    @classmethod
     def validate_content(cls, v):
         """Validate content length."""
         if len(v.strip()) == 0:
             raise ValueError("Content cannot be empty")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "title": "Meeting Notes - Q4 Planning",
                 "content": "## Agenda\n\n1. Review Q3 performance\n2. Set Q4 objectives\n\nSee also: [Company Wiki](https://wiki.company.com)",
@@ -66,6 +68,7 @@ class NoteCreate(BaseModel):
                 "is_public": False,
             }
         }
+    )
 
 
 class NoteUpdate(BaseModel):
@@ -75,13 +78,14 @@ class NoteUpdate(BaseModel):
         default=None, min_length=1, max_length=200, description="Note title"
     )
     content: Optional[str] = Field(default=None, min_length=1, description="Note content")
-    tags: Optional[List[str]] = Field(default=None, max_items=20, description="Note tags")
+    tags: Optional[List[str]] = Field(default=None, max_length=20, description="Note tags")
     hyperlinks: Optional[List[HttpUrl]] = Field(
-        default=None, max_items=50, description="External hyperlinks"
+        default=None, max_length=50, description="External hyperlinks"
     )
     is_public: Optional[bool] = Field(default=None, description="Whether note is publicly visible")
 
-    @validator("tags")
+    @field_validator("tags")
+    @classmethod
     def validate_tags(cls, v):
         """Validate tag format and uniqueness."""
         if v is None:
@@ -101,15 +105,16 @@ class NoteUpdate(BaseModel):
 
         return [tag.lower() for tag in v]  # Normalize to lowercase
 
-    @validator("content")
+    @field_validator("content")
+    @classmethod
     def validate_content(cls, v):
         """Validate content length."""
         if v is not None and len(v.strip()) == 0:
             raise ValueError("Content cannot be empty")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "title": "Updated Meeting Notes - Q4 Planning",
                 "content": "## Agenda\n\n1. Review Q3 performance ✅\n2. Set Q4 objectives\n3. Budget allocation\n\nAction items added.",
@@ -117,6 +122,7 @@ class NoteUpdate(BaseModel):
                 "hyperlinks": ["https://wiki.company.com", "https://budget.company.com"],
             }
         }
+    )
 
 
 class NoteResponse(BaseModel):
@@ -147,9 +153,9 @@ class NoteResponse(BaseModel):
     # Sharing information for note detail view (only populated for owned notes)
     sharing_info: Optional[Dict[str, Any]] = Field(default=None, description="Detailed sharing information")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "title": "Meeting Notes - Q4 Planning",
@@ -167,6 +173,7 @@ class NoteResponse(BaseModel):
                 "share_count": 3,
             }
         }
+    )
 
 
 class NoteListItem(BaseModel):
@@ -192,9 +199,9 @@ class NoteListItem(BaseModel):
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "title": "Meeting Notes - Q4 Planning",
@@ -209,6 +216,7 @@ class NoteListItem(BaseModel):
                 "updated_at": "2025-09-13T11:00:00Z",
             }
         }
+    )
 
 
 class NoteListResponse(PaginationResponse[NoteListItem]):
@@ -221,8 +229,8 @@ class NoteListResponse(PaginationResponse[NoteListItem]):
         default=None, description="Available tags for filtering"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [
                     # NoteListItem examples here
@@ -238,6 +246,7 @@ class NoteListResponse(PaginationResponse[NoteListItem]):
                 "available_tags": ["meeting", "planning", "personal", "work"],
             }
         }
+    )
 
 
 class NoteSearchRequest(BaseModel):
@@ -260,7 +269,8 @@ class NoteSearchRequest(BaseModel):
     sort_by: str = Field(default="updated_at", description="Sort field")
     sort_order: str = Field(default="desc", description="Sort order (asc/desc)")
 
-    @validator("sort_by")
+    @field_validator("sort_by")
+    @classmethod
     def validate_sort_by(cls, v):
         """Validate sort field."""
         allowed_fields = ["title", "created_at", "updated_at", "owner_username"]
@@ -268,15 +278,16 @@ class NoteSearchRequest(BaseModel):
             raise ValueError(f'Sort field must be one of: {", ".join(allowed_fields)}')
         return v
 
-    @validator("sort_order")
+    @field_validator("sort_order")
+    @classmethod
     def validate_sort_order(cls, v):
         """Validate sort order."""
         if v.lower() not in ["asc", "desc"]:
             raise ValueError('Sort order must be "asc" or "desc"')
         return v.lower()
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "meeting planning",
                 "tags": ["work", "planning"],
@@ -288,6 +299,7 @@ class NoteSearchRequest(BaseModel):
                 "sort_order": "desc",
             }
         }
+    )
 
 
 class NoteSearchResponse(PaginationResponse[NoteListItem]):
@@ -297,8 +309,8 @@ class NoteSearchResponse(PaginationResponse[NoteListItem]):
     filters_applied: Dict[str, Any] = Field(description="Filters that were applied")
     search_time_ms: Optional[float] = Field(description="Search execution time in milliseconds")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [
                     # NoteListItem examples here
@@ -318,3 +330,4 @@ class NoteSearchResponse(PaginationResponse[NoteListItem]):
                 "search_time_ms": 45.2,
             }
         }
+    )

@@ -1,7 +1,7 @@
 # JWT refresh tokens
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String
@@ -77,7 +77,7 @@ class RefreshToken(BaseModel):
         expires_days: int = 7,
     ) -> "RefreshToken":
         """Create new refresh token for user."""
-        expires_at = datetime.utcnow() + timedelta(days=expires_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=expires_days)
         return cls(
             token=cls.generate_secure_token(),
             user_id=user_id,
@@ -90,7 +90,13 @@ class RefreshToken(BaseModel):
     @property
     def is_expired(self) -> bool:
         """Check if token expired."""
-        return datetime.utcnow() > self.expires_at
+        expires_at = self.expires_at
+        if expires_at is None:
+            return True
+        # Normalize naive datetimes (assume UTC) to avoid aware/naive comparison errors
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > expires_at
 
     @property
     def is_valid(self) -> bool:
@@ -99,10 +105,10 @@ class RefreshToken(BaseModel):
 
     def record_usage(self) -> None:
         """Update last used timestamp."""
-        self.last_used_at = datetime.utcnow()
+        self.last_used_at = datetime.now(timezone.utc)
 
     def revoke(self, reason: str = "manual") -> None:
         """Revoke this token."""
         self.is_active = False
-        self.revoked_at = datetime.utcnow()
+        self.revoked_at = datetime.now(timezone.utc)
         self.revocation_reason = reason

@@ -3,7 +3,7 @@ Unit tests for Note model.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -220,7 +220,7 @@ class TestNoteModel:
 
         # Update view tracking
         note.view_count = 5
-        note.last_viewed_at = datetime.utcnow()
+        note.last_viewed_at = datetime.now(timezone.utc)
         await test_session.commit()
         await test_session.refresh(note)
 

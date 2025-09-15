@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -15,7 +15,7 @@ class Dummy:
 class FakeNoteRepo:
     def __init__(self):
         self.tags = ["work", "home", "python"]
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         self.notes = [
             Dummy(
                 id=uuid.uuid4(),

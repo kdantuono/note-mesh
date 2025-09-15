@@ -26,7 +26,9 @@ dependencies = [
     "python-multipart>=0.0.6",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
-    "httpx>=0.25.2",
+    # Starlette TestClient relies on httpx Client API that changed in 0.28
+    # Pin to <0.28 to keep compatibility
+    "httpx>=0.25.2,<0.28",
 ]
 
 [project.optional-dependencies]

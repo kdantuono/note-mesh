@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.notemesh.core.repositories.note_repository import NoteRepository
 
@@ -36,8 +36,8 @@ class TestTagSearchRegression:
         mock_note.title = "Work Meeting Notes"
         mock_note.content = "Meeting about project planning"
         mock_note.owner_id = user_id
-        mock_note.created_at = datetime.utcnow()
-        mock_note.updated_at = datetime.utcnow()
+        mock_note.created_at = datetime.now(timezone.utc)
+        mock_note.updated_at = datetime.now(timezone.utc)
 
         # Mock tag
         mock_tag = Mock()
@@ -72,8 +72,8 @@ class TestTagSearchRegression:
         mock_note.title = "Any Note"
         mock_note.content = "Any content"
         mock_note.owner_id = user_id
-        mock_note.created_at = datetime.utcnow()
-        mock_note.updated_at = datetime.utcnow()
+        mock_note.created_at = datetime.now(timezone.utc)
+        mock_note.updated_at = datetime.now(timezone.utc)
         mock_note.tags = []
 
         mock_result = Mock()

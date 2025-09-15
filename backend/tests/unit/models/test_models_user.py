@@ -3,7 +3,7 @@ Unit tests for User model.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -213,8 +213,8 @@ class TestUserModel:
         await test_session.refresh(user)
 
         # Create refresh tokens
-        token1 = RefreshToken(token="token1", user_id=user.id, expires_at=datetime.utcnow())
-        token2 = RefreshToken(token="token2", user_id=user.id, expires_at=datetime.utcnow())
+        token1 = RefreshToken(token="token1", user_id=user.id, expires_at=datetime.now(timezone.utc))
+        token2 = RefreshToken(token="token2", user_id=user.id, expires_at=datetime.now(timezone.utc))
 
         test_session.add_all([token1, token2])
         await test_session.commit()

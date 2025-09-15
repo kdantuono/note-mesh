@@ -22,6 +22,9 @@ class TestSearchTagFilterIntegration:
         service = SearchService(mock_session)
         # Mock the note repository
         service.note_repo = AsyncMock()
+        # Force redis client methods to return no cached / search results so DB path is taken
+        service.redis_client.get_cached_search = AsyncMock(return_value=None)
+        service.redis_client.search_notes = AsyncMock(return_value=[])
         return service
 
     @pytest.fixture

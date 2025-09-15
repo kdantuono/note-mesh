@@ -6,7 +6,7 @@ import json
 import logging
 import logging.config
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -19,7 +19,7 @@ class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -222,8 +222,7 @@ class LoggingMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         request_id = id(scope)  # Simple request ID
 
         # Log request
@@ -247,7 +246,7 @@ class LoggingMiddleware:
         # Process request
         async def send_wrapper(message):
             if message["type"] == "http.response.start":
-                duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
                 # Log response
                 self.logger.info(
@@ -266,7 +265,7 @@ class LoggingMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         except Exception as exc:
-            duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             self.logger.error(
                 "HTTP Request Failed",

@@ -1,7 +1,7 @@
 """Unit tests for NoteService.get_note shared-access behavior."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import pytest
 
 from fastapi import HTTPException
@@ -18,7 +18,7 @@ class DummyNote:
         self.tags = []
         self.hyperlinks = []
         # Provide required timestamps for NoteResponse validation
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         self.created_at = now
         self.updated_at = now
 

@@ -3,7 +3,7 @@
 import pytest
 import asyncio
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 # For real database testing
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -141,7 +141,7 @@ class TestTagSearchRealIntegration:
             shared_with_user_id=data['user1'].id,
             permission="read",
             status=ShareStatus.ACTIVE,
-            shared_at=datetime.utcnow()
+            shared_at=datetime.now(timezone.utc)
         )
 
         db_session.add(share)

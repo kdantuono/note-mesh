@@ -1,6 +1,6 @@
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -78,7 +78,7 @@ class FakeSession:
 async def test_create_and_get_update_delete_and_list(monkeypatch):
     user_id = uuid.uuid4()
     note_id = uuid.uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     note = Dummy(
         id=note_id,
         owner_id=user_id,

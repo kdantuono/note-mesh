@@ -1,7 +1,7 @@
 """Health service implementation."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 import redis.asyncio as redis
@@ -31,7 +31,7 @@ class HealthService(IHealthService):
 
         return HealthCheckResponse(
             status=overall_status,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             version="0.1.0",
             checks={"database": db_health, "redis": redis_health},
         )
@@ -88,7 +88,7 @@ class HealthService(IHealthService):
         """Get system metrics."""
         # Basic system metrics
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "uptime_seconds": None,  # Could be implemented
             "memory_usage_mb": None,  # Could be implemented
             "cpu_usage_percent": None,  # Could be implemented

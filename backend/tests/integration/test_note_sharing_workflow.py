@@ -3,23 +3,11 @@
 import pytest
 import uuid
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from src.notemesh.main import app
-from src.notemesh.database import get_db_session
-from src.notemesh.core.models.base import BaseModel
 
 
 class TestNoteSharingWorkflow:
     """Test complete note sharing workflow from creation to access."""
 
-    @pytest.fixture
-    def client(self):
-        """Create test client."""
-        return TestClient(app)
-
-    @pytest.mark.skip(reason="Async database connection issue with TestClient - complex event loop problem")
     def test_complete_sharing_workflow(self, client):
         """Test complete sharing workflow that reproduces the frontend bug."""
 

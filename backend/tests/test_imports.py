@@ -31,14 +31,14 @@ def test_imports():
 
         print("✓ Schema imports successful")
 
-        return True
+        assert True
 
     except Exception as e:
         print(f"✗ Import error: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False
 
 
 def test_router_structure():
@@ -62,7 +62,7 @@ def test_router_structure():
         for path in expected_notes_paths:
             if path not in notes_paths:
                 print(f"✗ Notes router missing path: {path}")
-                return False
+                assert False, f"Notes router missing path: {path}"
 
         print(f"✓ Notes router has expected paths: {notes_paths}")
 
@@ -80,18 +80,18 @@ def test_router_structure():
         for path in expected_auth_paths:
             if path not in auth_paths:
                 print(f"✗ Auth router missing path: {path}")
-                return False
+                assert False, f"Auth router missing path: {path}"
 
         print(f"✓ Auth router has expected paths: {auth_paths}")
 
-        return True
+        assert True
 
     except Exception as e:
         print(f"✗ Router structure test error: {e}")
         import traceback
 
         traceback.print_exc()
-        return False
+        assert False
 
 
 if __name__ == "__main__":

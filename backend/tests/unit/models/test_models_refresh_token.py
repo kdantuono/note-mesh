@@ -3,7 +3,7 @@ Unit tests for RefreshToken model.
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -20,7 +20,7 @@ class TestRefreshTokenModel:
         token = RefreshToken(
             token="test_token_12345",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
             device_identifier="iPhone 12",
             created_from_ip="192.168.1.1",
         )
@@ -43,7 +43,7 @@ class TestRefreshTokenModel:
     @pytest.mark.asyncio
     async def test_refresh_token_defaults(self, test_session, test_user):
         """Test refresh token with default values."""
-        expires = datetime.utcnow() + timedelta(days=7)
+        expires = datetime.now(timezone.utc) + timedelta(days=7)
 
         token = RefreshToken(token="minimal_token", user_id=test_user.id, expires_at=expires)
 
@@ -62,7 +62,7 @@ class TestRefreshTokenModel:
         token = RefreshToken(
             token="abcdefghijklmnop",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
         test_session.add(token)
@@ -75,7 +75,7 @@ class TestRefreshTokenModel:
     async def test_refresh_token_repr_short_token(self, test_session, test_user):
         """Test refresh token repr with short token."""
         token = RefreshToken(
-            token="short", user_id=test_user.id, expires_at=datetime.utcnow() + timedelta(days=7)
+            token="short", user_id=test_user.id, expires_at=datetime.now(timezone.utc) + timedelta(days=7)
         )
 
         test_session.add(token)
@@ -119,8 +119,14 @@ class TestRefreshTokenModel:
         assert token.is_active is True
 
         # Check expiration is roughly 14 days from now
-        expected_expiry = datetime.utcnow() + timedelta(days=14)
-        diff = abs((token.expires_at - expected_expiry).total_seconds())
+        expected_expiry = datetime.now(timezone.utc) + timedelta(days=14)
+        # Normalize possible naive datetime returned by SQLite/SQLAlchemy
+        token_expiry = (
+            token.expires_at.replace(tzinfo=timezone.utc)
+            if token.expires_at.tzinfo is None
+            else token.expires_at
+        )
+        diff = abs((token_expiry - expected_expiry).total_seconds())
         assert diff < 60  # Within 1 minute
 
         # Token should be generated
@@ -132,13 +138,13 @@ class TestRefreshTokenModel:
         token1 = RefreshToken(
             token="duplicate_token",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
         token2 = RefreshToken(
             token="duplicate_token",  # Same token
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
         test_session.add(token1)
@@ -157,7 +163,7 @@ class TestRefreshTokenModel:
         expired_token = RefreshToken(
             token="expired_token",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() - timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
             is_active=True,
         )
 
@@ -170,7 +176,7 @@ class TestRefreshTokenModel:
         valid_token = RefreshToken(
             token="valid_token",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             is_active=True,
         )
 
@@ -186,7 +192,7 @@ class TestRefreshTokenModel:
         valid_token = RefreshToken(
             token="valid",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=1),
             is_active=True,
         )
 
@@ -199,7 +205,7 @@ class TestRefreshTokenModel:
         inactive_token = RefreshToken(
             token="inactive",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=1),
             is_active=False,
         )
 
@@ -212,7 +218,7 @@ class TestRefreshTokenModel:
         expired_token = RefreshToken(
             token="expired",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() - timedelta(days=1),
+            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
             is_active=True,
         )
 
@@ -227,7 +233,7 @@ class TestRefreshTokenModel:
         token = RefreshToken(
             token="to_revoke",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
         test_session.add(token)
@@ -249,7 +255,7 @@ class TestRefreshTokenModel:
         token = RefreshToken(
             token="used_token",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
         test_session.add(token)
@@ -269,7 +275,7 @@ class TestRefreshTokenModel:
         token = RefreshToken(
             token="related_token",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
         test_session.add(token)
@@ -290,7 +296,7 @@ class TestRefreshTokenModel:
 
         # Create token
         token = RefreshToken(
-            token="cascade_test", user_id=user.id, expires_at=datetime.utcnow() + timedelta(days=7)
+            token="cascade_test", user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(days=7)
         )
         test_session.add(token)
         await test_session.commit()
@@ -310,7 +316,7 @@ class TestRefreshTokenModel:
         token = RefreshToken(
             token="ipv6_token",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
             created_from_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334",
         )
 
@@ -328,7 +334,7 @@ class TestRefreshTokenModel:
             token = RefreshToken(
                 token="a" * 256,  # Too long
                 user_id=test_user.id,
-                expires_at=datetime.utcnow() + timedelta(days=7),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=7),
             )
             test_session.add(token)
             await test_session.commit()
@@ -340,7 +346,7 @@ class TestRefreshTokenModel:
             token = RefreshToken(
                 token="valid_token",
                 user_id=test_user.id,
-                expires_at=datetime.utcnow() + timedelta(days=7),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=7),
                 device_identifier="a" * 256,  # Too long
             )
             test_session.add(token)
@@ -353,7 +359,7 @@ class TestRefreshTokenModel:
             token = RefreshToken(
                 token="valid_token2",
                 user_id=test_user.id,
-                expires_at=datetime.utcnow() + timedelta(days=7),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=7),
                 created_from_ip="a" * 46,  # Too long
             )
             test_session.add(token)
@@ -368,14 +374,14 @@ class TestRefreshTokenModel:
         token1 = RefreshToken(
             token="family_token1",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
             token_family_id=family_id,
         )
 
         token2 = RefreshToken(
             token="family_token2",
             user_id=test_user.id,
-            expires_at=datetime.utcnow() + timedelta(days=7),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
             token_family_id=family_id,
         )
 

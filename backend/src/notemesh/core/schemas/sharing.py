@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 if TYPE_CHECKING:
     from .notes import NoteListItem
@@ -49,8 +49,8 @@ class ShareRequest(BaseModel):
             raise ValueError("Duplicate usernames are not allowed")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "note_id": "123e4567-e89b-12d3-a456-426614174000",
                 "shared_with_usernames": ["colleague", "manager"],
@@ -58,6 +58,7 @@ class ShareRequest(BaseModel):
                 "message": "Sharing the Q4 planning notes for your review.",
             }
         }
+    )
 
 
 class ShareResponse(BaseModel):
@@ -84,9 +85,9 @@ class ShareResponse(BaseModel):
     is_active: bool = Field(description="Whether the share is currently active")
     access_count: int = Field(default=0, description="Number of times shared note was accessed")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": "789e0123-e89b-12d3-a456-426614174000",
                 "note_id": "123e4567-e89b-12d3-a456-426614174000",
@@ -103,6 +104,7 @@ class ShareResponse(BaseModel):
                 "access_count": 5,
             }
         }
+    )
 
 
 class SharedNoteResponse(BaseModel):
@@ -138,9 +140,9 @@ class SharedNoteResponse(BaseModel):
     can_write: bool = Field(description="Whether user can edit this note")
     can_share: bool = Field(description="Whether user can share this note")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "title": "Q4 Planning Notes",
@@ -161,6 +163,7 @@ class SharedNoteResponse(BaseModel):
                 "last_accessed": "2025-09-13T14:20:00Z",
             }
         }
+    )
 
 
 class ShareListRequest(BaseModel):
@@ -175,8 +178,9 @@ class ShareListRequest(BaseModel):
     page: Optional[int] = Field(default=1, ge=1, description="Page number")
     per_page: Optional[int] = Field(default=20, ge=1, le=100, description="Items per page")
 
-    class Config:
-        json_schema_extra = {"example": {"type": "received", "page": 1, "per_page": 20}}
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"type": "received", "page": 1, "per_page": 20}}
+    )
 
 
 class ShareListResponse(BaseModel):
@@ -189,8 +193,8 @@ class ShareListResponse(BaseModel):
     total_pages: int = Field(description="Total number of pages")
     type: str = Field(description="Type of shares listed")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "shares": [],
                 "total_count": 25,
@@ -200,6 +204,7 @@ class ShareListResponse(BaseModel):
                 "type": "given",
             }
         }
+    )
 
 
 class RevokeShareRequest(BaseModel):
@@ -210,13 +215,14 @@ class RevokeShareRequest(BaseModel):
         default=None, max_length=200, description="Optional reason for revoking share"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "share_id": "789e0123-e89b-12d3-a456-426614174000",
                 "reason": "Project completed, no longer need access",
             }
         }
+    )
 
 
 class ShareStatsResponse(BaseModel):
@@ -226,10 +232,11 @@ class ShareStatsResponse(BaseModel):
     shares_received: int = Field(description="Total shares received by user")
     unique_notes_shared: int = Field(description="Number of unique notes shared by user")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {"shares_given": 15, "shares_received": 8, "unique_notes_shared": 10}
         }
+    )
 
 
 # Note: Forward references will be resolved when all modules are loaded

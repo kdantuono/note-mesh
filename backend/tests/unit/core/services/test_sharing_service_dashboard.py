@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
+from datetime import datetime, timezone
 from src.notemesh.core.services.sharing_service import SharingService
 from src.notemesh.core.schemas.sharing import ShareListRequest
 from src.notemesh.core.models.share import Share
@@ -81,15 +81,15 @@ class TestSharingServiceDashboard:
         note.tags = [mock_tag]
         note.hyperlinks = ["https://example.com"]
         note.is_public = False
-        note.created_at = datetime.utcnow()
-        note.updated_at = datetime.utcnow()
+        note.created_at = datetime.now(timezone.utc)
+        note.updated_at = datetime.now(timezone.utc)
         note.view_count = 5
         return note
 
     @pytest.fixture
     def mock_share(self, owner_user_id, recipient_user_id, note_id, mock_note_with_tags, mock_recipient):
         """Mock share with complete note data."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         share = Mock(spec=Share)
         share.id = uuid.uuid4()
         share.note_id = note_id
