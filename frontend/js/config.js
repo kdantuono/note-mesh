@@ -6,7 +6,7 @@ const CONFIG = {
     TOKEN_KEY: 'notemesh_token',
     REFRESH_TOKEN_KEY: 'notemesh_refresh_token',
     USER_KEY: 'notemesh_user',
-    ITEMS_PER_PAGE: 12,
+    ITEMS_PER_PAGE: 9,
     MAX_CONTENT_PREVIEW: 150,
     TOAST_DURATION: 3000 // Reduced toast duration
 };

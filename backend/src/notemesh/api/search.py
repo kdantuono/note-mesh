@@ -19,7 +19,7 @@ async def search_notes(
     q: str = Query(..., description="Search query"),
     tags: List[str] = Query(None, description="Tag filters"),
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    per_page: int = Query(9, ge=1, le=100),
     current_user_id: UUID = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_db_session),
 ):

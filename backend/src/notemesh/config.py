@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     cors_allow_credentials: bool = Field(default=True, description="CORS allow credentials")
 
     # Pagination
-    default_page_size: int = Field(default=20, description="Default pagination size")
+    default_page_size: int = Field(default=9, description="Default pagination size")
     max_page_size: int = Field(default=100, description="Maximum pagination size")
 
     # Rate limiting
