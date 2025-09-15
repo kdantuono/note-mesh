@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     database_echo: bool = Field(default=False)  # useful for debugging
 
     # Redis
-    redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
+    redis_url: str = Field(default="redis://:devpassword@localhost:6379/0", description="Redis connection URL")
     redis_max_connections: int = Field(default=10, description="Redis connection pool size")
 
     # JWT

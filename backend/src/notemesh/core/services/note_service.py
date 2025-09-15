@@ -1,5 +1,6 @@
 """Note service implementation."""
 
+import logging
 import re
 from typing import Dict, Iterable, List, Optional
 from uuid import UUID
@@ -17,6 +18,8 @@ from ..repositories.share_repository import ShareRepository
 from ..repositories.user_repository import UserRepository
 from ..schemas.notes import NoteCreate, NoteListItem, NoteListResponse, NoteResponse, NoteUpdate
 from .interfaces import INoteService
+
+logger = logging.getLogger(__name__)
 
 
 class NoteService(INoteService):
@@ -56,6 +59,21 @@ class NoteService(INoteService):
         # Add tags
         if all_tags:
             await self._add_tags_to_note(note.id, list(all_tags))
+
+        # Index note in Redis for full-text search
+        try:
+            from ..redis_client import get_redis_client
+            redis_client = get_redis_client()
+            await redis_client.index_note_for_search(
+                note_id=note.id,
+                title=note.title,
+                content=note.content,
+                tags=list(all_tags),
+                user_id=user_id
+            )
+            logger.info(f"Indexed note {note.id} in Redis for search")
+        except Exception as e:
+            logger.warning(f"Failed to index note in Redis: {e}")
 
         return await self._note_to_response(
             note, user_id, override_tags=list(all_tags) if all_tags else []
@@ -140,10 +158,40 @@ class NoteService(INoteService):
 
             await self.session.refresh(updated_note, ["tags"])
 
+        # Re-index note in Redis for full-text search after update
+        try:
+            from ..redis_client import get_redis_client
+            redis_client = get_redis_client()
+
+            # Get updated tags for indexing
+            current_tags = []
+            if hasattr(updated_note, 'tags') and updated_note.tags:
+                current_tags = [tag.name if hasattr(tag, 'name') else str(tag) for tag in updated_note.tags]
+
+            await redis_client.index_note_for_search(
+                note_id=updated_note.id,
+                title=updated_note.title,
+                content=updated_note.content,
+                tags=current_tags,
+                user_id=user_id
+            )
+            logger.info(f"Re-indexed updated note {updated_note.id} in Redis for search")
+        except Exception as e:
+            logger.warning(f"Failed to re-index updated note in Redis: {e}")
+
         return await self._note_to_response(updated_note, user_id)
 
     async def delete_note(self, note_id: UUID, user_id: UUID) -> bool:
         """Delete note."""
+        # Remove from Redis search index before deleting from database
+        try:
+            from ..redis_client import get_redis_client
+            redis_client = get_redis_client()
+            await redis_client.remove_note_from_search(note_id)
+            logger.info(f"Removed note {note_id} from Redis search index")
+        except Exception as e:
+            logger.warning(f"Failed to remove note from Redis search index: {e}")
+
         return await self.note_repo.delete_note(note_id, user_id)
 
     async def list_user_notes(

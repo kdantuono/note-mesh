@@ -1,5 +1,7 @@
 """Search service implementation."""
 
+import json
+import logging
 from typing import Any, Dict, List
 from uuid import UUID
 
@@ -7,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories.note_repository import NoteRepository
 from ..schemas.notes import NoteSearchRequest, NoteSearchResponse
+from ..redis_client import get_redis_client
 from .interfaces import ISearchService
+
+logger = logging.getLogger(__name__)
 
 
 class SearchService(ISearchService):
@@ -16,9 +21,13 @@ class SearchService(ISearchService):
     def __init__(self, session: AsyncSession):
         self.session = session
         self.note_repo = NoteRepository(session)
+        self.redis_client = get_redis_client()
 
     async def search_notes(self, user_id: UUID, request: NoteSearchRequest) -> NoteSearchResponse:
-        """Search notes with filters."""
+        """Search notes with filters - with Redis caching."""
+        import time
+        start_time = time.time()
+
         # Allow search with only tag filter (no query text)
         has_query = request.query.strip() and request.query.strip() != "*"
         has_tags = request.tags and len(request.tags) > 0
@@ -38,10 +47,65 @@ class SearchService(ISearchService):
                 search_time_ms=0.0,
             )
 
-        # Use repository search
-        notes = await self.note_repo.search_notes(
-            user_id=user_id, query=request.query.strip(), tag_filter=request.tags
-        )
+        # Create cache key from search parameters
+        cache_key_data = {
+            "query": request.query.strip(),
+            "tags": sorted(request.tags) if request.tags else [],
+            "page": request.page or 1,
+            "per_page": request.per_page or 20,
+        }
+        cache_key = f"search:{user_id}:{hash(str(cache_key_data))}"
+
+        # Try to get cached results first
+        try:
+            cached_result = await self.redis_client.get_cached_search(
+                str(cache_key_data), user_id
+            )
+            if cached_result:
+                logger.info(f"Cache HIT for search query: {request.query}")
+                # Convert back to NoteSearchResponse
+                search_time_ms = (time.time() - start_time) * 1000
+                cached_result["search_time_ms"] = search_time_ms
+                cached_result["cached"] = True
+                return NoteSearchResponse(**cached_result)
+        except Exception as e:
+            logger.warning(f"Cache lookup failed: {e}")
+
+        logger.info(f"Cache MISS for search query: {request.query}")
+
+        # Try Redis full-text search FIRST (if available)
+        redis_results = []
+        try:
+            redis_results = await self.redis_client.search_notes(
+                query=request.query.strip(),
+                user_id=user_id,
+                tags=request.tags or []
+            )
+            logger.info(f"Redis full-text search returned {len(redis_results)} results")
+        except Exception as e:
+            logger.warning(f"Redis search failed, falling back to database: {e}")
+
+        # If Redis search found results, use them; otherwise fallback to database
+        if redis_results:
+            logger.info(f"Using Redis search results for query: {request.query}")
+            # Convert Redis results to notes
+            notes = []
+            for result in redis_results:
+                # We need to fetch the actual note objects from database
+                # using the note IDs from Redis results
+                try:
+                    note_id = UUID(result["note_id"])
+                    note = await self.note_repo.get_by_id(note_id)
+                    if note:
+                        notes.append(note)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch note {result.get('note_id')}: {e}")
+        else:
+            logger.info(f"Using database search for query: {request.query}")
+            # Fallback to database search
+            notes = await self.note_repo.search_notes(
+                user_id=user_id, query=request.query.strip(), tag_filter=request.tags
+            )
 
         # Convert to list item format for search results
         from ..schemas.notes import NoteListItem
@@ -116,7 +180,11 @@ class SearchService(ISearchService):
 
         paginated_notes = note_list_items[start_idx:end_idx]
 
-        return NoteSearchResponse(
+        # Calculate search time
+        search_time_ms = (time.time() - start_time) * 1000
+
+        # Build response
+        response = NoteSearchResponse(
             items=paginated_notes,
             total=len(note_list_items),
             page=page,
@@ -126,8 +194,20 @@ class SearchService(ISearchService):
             has_prev=page > 1,
             query=request.query,
             filters_applied={"tag_filter": request.tags or []},
-            search_time_ms=None,  # Could be implemented with timing
+            search_time_ms=search_time_ms,
         )
+
+        # Cache the results for 5 minutes (300 seconds)
+        try:
+            response_dict = response.dict()
+            await self.redis_client.cache_search_results(
+                str(cache_key_data), user_id, response_dict, expire=300
+            )
+            logger.info(f"Cached search results for query: {request.query}")
+        except Exception as e:
+            logger.warning(f"Failed to cache search results: {e}")
+
+        return response
 
     async def index_note(self, note_id: UUID) -> bool:
         """Index note for search."""
@@ -163,11 +243,26 @@ class SearchService(ISearchService):
             }
 
     async def suggest_tags(self, user_id: UUID, query: str, limit: int = 10) -> List[str]:
-        """Suggest tags based on query."""
+        """Suggest tags based on query - with Redis caching."""
         if not query.strip():
             return []
 
-        # Get all user tags
+        # Create cache key for tag suggestions
+        cache_key = f"tag_suggestions:{user_id}:{query.lower()}:{limit}"
+
+        # Try to get cached results first
+        try:
+            cached_result = await self.redis_client.get(cache_key)
+            if cached_result:
+                logger.info(f"Cache HIT for tag suggestions: {query}")
+                import json
+                return json.loads(cached_result)
+        except Exception as e:
+            logger.warning(f"Tag suggestions cache lookup failed: {e}")
+
+        logger.info(f"Cache MISS for tag suggestions: {query}")
+
+        # Get all user tags from database
         all_tags = await self.note_repo.get_user_tags(user_id)
 
         # Filter tags that contain the query (case insensitive)
@@ -185,20 +280,54 @@ class SearchService(ISearchService):
                 return 2  # Contains query
 
         matching_tags.sort(key=lambda t: (tag_score(t), len(t), t))
+        result = matching_tags[:limit]
 
-        return matching_tags[:limit]
+        # Cache the results for 5 minutes (300 seconds)
+        try:
+            import json
+            await self.redis_client.set(cache_key, json.dumps(result), expire=300)
+            logger.info(f"Cached tag suggestions for query: {query}")
+        except Exception as e:
+            logger.warning(f"Failed to cache tag suggestions: {e}")
+
+        return result
 
     async def get_search_stats(self, user_id: UUID) -> Dict[str, Any]:
-        """Get user search stats."""
-        # Get basic stats about user's notes
+        """Get user search stats - with Redis caching."""
+        # Create cache key for search stats
+        cache_key = f"search_stats:{user_id}"
+
+        # Try to get cached results first
+        try:
+            cached_result = await self.redis_client.get(cache_key)
+            if cached_result:
+                logger.info(f"Cache HIT for search stats: {user_id}")
+                import json
+                return json.loads(cached_result)
+        except Exception as e:
+            logger.warning(f"Search stats cache lookup failed: {e}")
+
+        logger.info(f"Cache MISS for search stats: {user_id}")
+
+        # Get basic stats about user's notes from database
         all_tags = await self.note_repo.get_user_tags(user_id)
 
         # Count notes (using a simple approach)
         notes, total_count = await self.note_repo.list_user_notes(user_id, page=1, per_page=1)
 
-        return {
+        result = {
             "total_notes": total_count,
             "total_tags": len(all_tags),
             "most_used_tags": all_tags[:10],  # Top 10 tags (could be improved with usage count)
             "searchable_content": True,
         }
+
+        # Cache the results for 10 minutes (600 seconds) since stats change less frequently
+        try:
+            import json
+            await self.redis_client.set(cache_key, json.dumps(result), expire=600)
+            logger.info(f"Cached search stats for user: {user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to cache search stats: {e}")
+
+        return result

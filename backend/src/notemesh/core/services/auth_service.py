@@ -90,6 +90,37 @@ class AuthService(IAuthService):
         }
         await self.token_repo.create_token(token_data)
 
+        # Cache user session data in Redis for fast access
+        try:
+            from ..redis_client import get_redis_client
+            redis_client = get_redis_client()
+
+            # Create session data for Redis caching
+            session_data = {
+                "user_id": str(user.id),
+                "username": user.username,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "refresh_token": refresh_token,
+                "login_time": datetime.now(timezone.utc).isoformat(),
+                "last_activity": datetime.now(timezone.utc).isoformat()
+            }
+
+            # Cache session with refresh token as session ID, expire in sync with refresh token
+            await redis_client.cache_user_session(
+                session_id=refresh_token,
+                user_data=session_data,
+                expire=self.settings.refresh_token_expire_days * 24 * 3600  # Convert days to seconds
+            )
+
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Cached user session for user {user.id} in Redis")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to cache user session in Redis: {e}")
+
         # Create user response
         user_response = UserResponse(
             id=user.id,
@@ -144,6 +175,42 @@ class AuthService(IAuthService):
             + timedelta(days=self.settings.refresh_token_expire_days),
         }
         await self.token_repo.create_token(token_data)
+
+        # Update session data in Redis (remove old session, create new one)
+        try:
+            from ..redis_client import get_redis_client
+            redis_client = get_redis_client()
+
+            # Remove old session with old refresh token
+            old_session = await redis_client.get_user_session(request.refresh_token)
+            if old_session:
+                await redis_client.delete(f"session:{request.refresh_token}")
+
+            # Create new session data for Redis caching
+            session_data = {
+                "user_id": str(user.id),
+                "username": user.username,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "refresh_token": new_refresh_token,
+                "login_time": old_session.get("login_time") if old_session else datetime.now(timezone.utc).isoformat(),
+                "last_activity": datetime.now(timezone.utc).isoformat()
+            }
+
+            # Cache new session with new refresh token as session ID
+            await redis_client.cache_user_session(
+                session_id=new_refresh_token,
+                user_data=session_data,
+                expire=self.settings.refresh_token_expire_days * 24 * 3600  # Convert days to seconds
+            )
+
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Updated user session for user {user.id} in Redis")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to update user session in Redis: {e}")
 
         # Create user response
         user_response = UserResponse(
@@ -232,7 +299,29 @@ class AuthService(IAuthService):
         return True
 
     async def logout_user(self, user_id: UUID, access_token: str) -> bool:
-        """Logout user."""
+        """Logout user with Redis token blacklisting."""
+        from ..redis_client import get_redis_client
+        from ...security.jwt import blacklist_token
+
+        # Add access token to Redis blacklist for immediate invalidation
+        try:
+            await blacklist_token(access_token)
+        except Exception as e:
+            # Log error but don't fail logout if Redis is down
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to blacklist token in Redis: {e}")
+
         # Delete all refresh tokens for user
         deleted_count = await self.token_repo.delete_user_tokens(user_id)
+
+        # Also invalidate any user sessions in Redis
+        try:
+            redis_client = get_redis_client()
+            await redis_client.invalidate_user_sessions(user_id)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to invalidate user sessions in Redis: {e}")
+
         return deleted_count > 0

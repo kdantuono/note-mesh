@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import auth_router, health_router, notes_router, search_router, sharing_router
 from .config import get_settings
 from .core.logging import LoggingMiddleware, get_logger, setup_logging
+from .core.redis_client import get_redis_client
 from .database import create_tables
 
 # Setup logging first
@@ -26,6 +27,14 @@ async def lifespan(app: FastAPI):
         extra={"version": "0.1.0", "environment": settings.environment, "debug": settings.debug},
     )
 
+    # Initialize Redis connection
+    redis_client = get_redis_client()
+    try:
+        await redis_client.connect()
+        logger.info("Redis connection established")
+    except Exception as e:
+        logger.warning(f"Redis connection failed: {e}. Continuing without Redis...")
+
     # Allow tests to skip touching the real DB (e.g., when using SQLite in-memory)
     import os
 
@@ -43,6 +52,11 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down NoteMesh application")
+    try:
+        await redis_client.disconnect()
+        logger.info("Redis connection closed")
+    except Exception as e:
+        logger.warning(f"Redis disconnect failed: {e}")
 
 
 app = FastAPI(
