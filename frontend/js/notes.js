@@ -60,7 +60,8 @@ class NotesManager {
                 }
             }
 
-            if (ownerFilter === 'all' || ownerFilter === 'shared_by_me') {
+            // Only load "shared by me" notes when explicitly requested (not for unified 'all' view)
+            if (ownerFilter === 'shared_by_me') {
                 try {
                     const sharedByMe = await apiClient.getMyShares(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedByMe && sharedByMe.shares && Array.isArray(sharedByMe.shares)) {
@@ -158,7 +159,8 @@ class NotesManager {
 
     // Create HTML for a single note card
     createNoteCard(note) {
-        const preview = this.createContentPreview(note.content);
+        // Use content_preview if available (from NoteListItem), otherwise create preview from content
+        const preview = note.content_preview || this.createContentPreview(note.content);
         const tags = note.tags ? note.tags.slice(0, 3) : [];
         const remainingTags = note.tags ? Math.max(0, note.tags.length - 3) : 0;
 
@@ -370,7 +372,15 @@ class NotesManager {
         // Sharing information
         let sharingInfo = '';
         if (isOwner && note.share_count > 0) {
-            sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${note.share_count} user(s)`;
+            // Show detailed sharing information if available
+            if (note.sharing_info && note.sharing_info.shared_with && note.sharing_info.shared_with.length > 0) {
+                const sharedWithNames = note.sharing_info.shared_with
+                    .map(user => user.display_name || user.username)
+                    .join(', ');
+                sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${this.escapeHtml(sharedWithNames)}`;
+            } else {
+                sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${note.share_count} user(s)`;
+            }
         } else if (!isOwner) {
             const sharedByName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username || 'Unknown user';
             sharingInfo = `<br><i class="fas fa-share" aria-hidden="true"></i> <strong>Shared by:</strong> ${this.escapeHtml(sharedByName)}`;
@@ -757,8 +767,25 @@ class NotesManager {
 
             const searchResults = await apiClient.searchNotes(searchQuery || '*', filters);
 
-            // Process search results to match loadNotes format
-            this.currentNotes = this.markNotesAsType(searchResults.items || [], NOTE_TYPES.OWNED);
+            // Process search results to match loadNotes format - use backend ownership info
+            const searchNotes = (searchResults.items || []).map(note => {
+                // Determine note type based on backend ownership flags
+                let noteType;
+                if (note.is_owned) {
+                    noteType = NOTE_TYPES.OWNED;
+                } else if (note.is_shared) {
+                    noteType = NOTE_TYPES.SHARED_WITH_ME;
+                } else {
+                    // Fallback - should not happen with correct backend
+                    noteType = NOTE_TYPES.OWNED;
+                }
+
+                return {
+                    ...note,
+                    note_type: noteType
+                };
+            });
+            this.currentNotes = searchNotes;
             this.currentPage = searchResults.page || 1;
             this.totalPages = searchResults.pages || 1;
             this.currentFilters = { q: searchQuery, tagFilter, ownerFilter };

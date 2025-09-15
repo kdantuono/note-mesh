@@ -28,7 +28,6 @@ class TestNoteSharingWorkflow:
 
         user1_data = {
             "username": f"sharetest1_{unique_suffix}",
-            "email": f"sharetest1_{unique_suffix}@example.com",
             "password": "testpass123",
             "full_name": "Share Test User 1",
             "confirm_password": "testpass123"
@@ -36,7 +35,6 @@ class TestNoteSharingWorkflow:
 
         user2_data = {
             "username": f"sharetest2_{unique_suffix}",
-            "email": f"sharetest2_{unique_suffix}@example.com",
             "password": "testpass123",
             "full_name": "Share Test User 2",
             "confirm_password": "testpass123"

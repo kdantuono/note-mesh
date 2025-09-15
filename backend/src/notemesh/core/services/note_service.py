@@ -264,6 +264,21 @@ class NoteService(INoteService):
         owner_username = owner_info.username if owner_info else None
         owner_display_name = owner_info.full_name if owner_info else None
 
+        # Get detailed sharing information for owned notes
+        sharing_info = None
+        if current_user_id and current_user_id == note.owner_id:
+            # Only get detailed sharing info if current user owns this note
+            try:
+                sharing_details = await self._get_detailed_sharing_info(note.id, current_user_id)
+                sharing_info = sharing_details
+            except Exception:
+                # Fallback if sharing lookup fails
+                sharing_info = {
+                    "is_shared_by_user": False,
+                    "share_count": 0,
+                    "shared_with": []
+                }
+
         return NoteResponse(
             id=note.id,
             title=note.title,
@@ -280,7 +295,8 @@ class NoteService(INoteService):
             created_at=note.created_at,
             updated_at=note.updated_at,
             view_count=getattr(note, "view_count", 0),
-            share_count=0,  # TODO: calculate actual share count
+            share_count=sharing_info.get("share_count", 0) if sharing_info else 0,
+            sharing_info=sharing_info,
         )
 
     async def _note_to_list_item(self, note, current_user_id=None, override_tags=None) -> NoteListItem:
@@ -308,6 +324,19 @@ class NoteService(INoteService):
         owner_username = owner_info.username if owner_info else None
         owner_display_name = owner_info.full_name if owner_info else None
 
+        # Get sharing information for owned notes
+        is_shared_by_user = False
+        share_count = 0
+        if current_user_id and current_user_id == note.owner_id:
+            # Only get sharing info if current user owns this note
+            try:
+                sharing_info = await self._get_note_sharing_info(note.id, current_user_id)
+                is_shared_by_user = sharing_info.get("is_shared_by_user", False)
+                share_count = sharing_info.get("share_count", 0)
+            except Exception:
+                # Fallback if sharing lookup fails
+                pass
+
         return NoteListItem(
             id=note.id,
             title=note.title,
@@ -319,6 +348,8 @@ class NoteService(INoteService):
             is_shared=current_user_id != note.owner_id if current_user_id else False,
             is_owned=current_user_id == note.owner_id if current_user_id else False,
             can_edit=current_user_id == note.owner_id if current_user_id else False,
+            is_shared_by_user=is_shared_by_user,
+            share_count=share_count,
             created_at=note.created_at,
             updated_at=note.updated_at,
         )
@@ -334,6 +365,72 @@ class NoteService(INoteService):
     async def _get_user_info(self, user_id: UUID) -> Optional[User]:
         """Get user information by ID."""
         return await self.user_repo.get_by_id(user_id)
+
+    async def _get_note_sharing_info(self, note_id: UUID, user_id: UUID) -> dict:
+        """Get sharing information for a note owned by the user."""
+        try:
+            # Count active shares for this note created by the user
+            shares_given, _ = await self.share_repo.list_shares_given(user_id, page=1, per_page=1000)
+            note_shares = [share for share in shares_given if share.note_id == note_id and getattr(share, 'is_active', True)]
+
+            return {
+                "is_shared_by_user": len(note_shares) > 0,
+                "share_count": len(note_shares),
+                "shared_with": [getattr(share, 'shared_with_username', 'Unknown') for share in note_shares]
+            }
+        except Exception:
+            # Fallback in case of any error
+            return {
+                "is_shared_by_user": False,
+                "share_count": 0,
+                "shared_with": []
+            }
+
+    async def _get_detailed_sharing_info(self, note_id: UUID, user_id: UUID) -> dict:
+        """Get detailed sharing information for note detail view."""
+        try:
+            # Get all active shares for this note created by the user
+            shares_given, _ = await self.share_repo.list_shares_given(user_id, page=1, per_page=1000)
+            note_shares = [share for share in shares_given if share.note_id == note_id and getattr(share, 'is_active', True)]
+
+            # Build detailed sharing information
+            shared_with_details = []
+            for share in note_shares:
+                shared_user = getattr(share, 'shared_with_user', None)
+                if shared_user:
+                    shared_with_details.append({
+                        "id": str(shared_user.id),
+                        "username": shared_user.username,
+                        "display_name": getattr(shared_user, 'full_name', shared_user.username),
+                        "permission": getattr(share, 'permission', 'read'),
+                        "shared_at": getattr(share, 'shared_at', None),
+                        "expires_at": getattr(share, 'expires_at', None),
+                        "share_message": getattr(share, 'share_message', None)
+                    })
+                else:
+                    # Fallback if user details not available
+                    shared_with_details.append({
+                        "id": str(getattr(share, 'shared_with_user_id', '')),
+                        "username": getattr(share, 'shared_with_username', 'Unknown'),
+                        "display_name": getattr(share, 'shared_with_display_name', 'Unknown'),
+                        "permission": getattr(share, 'permission', 'read'),
+                        "shared_at": getattr(share, 'shared_at', None),
+                        "expires_at": getattr(share, 'expires_at', None),
+                        "share_message": getattr(share, 'share_message', None)
+                    })
+
+            return {
+                "is_shared_by_user": len(note_shares) > 0,
+                "share_count": len(note_shares),
+                "shared_with": shared_with_details
+            }
+        except Exception:
+            # Fallback in case of any error
+            return {
+                "is_shared_by_user": False,
+                "share_count": 0,
+                "shared_with": []
+            }
 
 
 def _get_or_create_tag_by_name(session: Session, name: str, created_by: User | None) -> Tag:

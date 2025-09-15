@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class LoginRequest(BaseModel):
@@ -27,13 +27,8 @@ class RegisterRequest(BaseModel):
     confirm_password: str = Field(min_length=8, max_length=128)
     full_name: Optional[str] = Field(default=None, max_length=100)
 
-    @validator("confirm_password")
-    def passwords_match(cls, v, values, **kwargs):
-        if "password" in values and v != values["password"]:
-            raise ValueError("Passwords do not match")
-        return v
-
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Validate username format."""
         if v is not None:
@@ -42,6 +37,12 @@ class RegisterRequest(BaseModel):
                     "Username can only contain letters, numbers, hyphens, and underscores"
                 )
         return v
+
+    @model_validator(mode='after')
+    def passwords_match(self):
+        if self.password != self.confirm_password:
+            raise ValueError("Passwords do not match")
+        return self
 
     class Config:
         json_schema_extra = {
@@ -131,12 +132,12 @@ class PasswordChangeRequest(BaseModel):
         min_length=8, max_length=128, description="New password confirmation"
     )
 
-    @validator("confirm_new_password")
-    def passwords_match(cls, v, values, **kwargs):
+    @model_validator(mode='after')
+    def passwords_match(self):
         """Validate that new passwords match."""
-        if "new_password" in values and v != values["new_password"]:
+        if self.new_password != self.confirm_new_password:
             raise ValueError("New passwords do not match")
-        return v
+        return self
 
     class Config:
         json_schema_extra = {
@@ -156,7 +157,8 @@ class UserUpdateRequest(BaseModel):
     )
     full_name: Optional[str] = Field(default=None, max_length=100, description="Full name")
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Validate username format."""
         if v is not None:

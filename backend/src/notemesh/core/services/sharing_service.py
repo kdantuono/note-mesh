@@ -191,10 +191,43 @@ class SharingService(ISharingService):
     def _share_to_response(self, share) -> ShareResponse:
         """Convert share model to response."""
         from datetime import datetime
+        from ..schemas.notes import NoteListItem
 
         shared_with_user_id = getattr(share, "shared_with_user_id", None)
         if not shared_with_user_id and getattr(share, "shared_with_user", None):
             shared_with_user_id = getattr(share.shared_with_user, "id", None)
+
+        # Create complete note data for dashboard display
+        note_data = None
+        if getattr(share, "note", None):
+            note = share.note
+            # Only create NoteListItem if note has required fields (id, title, owner_id)
+            if hasattr(note, 'id') and hasattr(note, 'title') and hasattr(note, 'owner_id'):
+                # Get owner info for note
+                owner_username = None
+                owner_display_name = None
+                if hasattr(note, 'owner') and note.owner:
+                    owner_username = note.owner.username
+                    owner_display_name = getattr(note.owner, 'full_name', None)
+                elif hasattr(share, 'shared_by_user') and share.shared_by_user:
+                    # Fallback to sharer info if note.owner not available
+                    owner_username = share.shared_by_user.username
+                    owner_display_name = getattr(share.shared_by_user, 'full_name', None)
+
+                note_data = NoteListItem(
+                    id=note.id,
+                    title=note.title,
+                    content_preview=getattr(note, 'content', '')[:200] + ("..." if len(getattr(note, 'content', '')) > 200 else ""),
+                    tags=[tag.name if hasattr(tag, 'name') else str(tag) for tag in getattr(note, 'tags', [])],
+                    owner_id=note.owner_id,
+                    owner_username=owner_username,
+                    owner_display_name=owner_display_name,
+                    is_shared=True,
+                    is_owned=False,  # This is a shared note from recipient perspective
+                    can_edit=getattr(share, "permission", "read") == "write",
+                    created_at=getattr(note, 'created_at', datetime.utcnow()),
+                    updated_at=getattr(note, 'updated_at', datetime.utcnow())
+                )
 
         return ShareResponse(
             id=share.id,
@@ -214,9 +247,42 @@ class SharingService(ISharingService):
             ),
             permission_level=getattr(share, "permission", "read"),
             message=getattr(share, "share_message", None),
+            note=note_data,  # Include complete note data
             shared_at=getattr(share, "created_at", datetime.utcnow()),
             expires_at=getattr(share, "expires_at", None),
             last_accessed=getattr(share, "last_accessed", None),
             is_active=getattr(share, "is_active", True),
             access_count=getattr(share, "access_count", 0),
         )
+
+    # Additional methods for test compatibility
+    async def create_share(self, user_id: UUID, request: ShareRequest) -> ShareResponse:
+        """Alias for share_note - creates single share."""
+        results = await self.share_note(user_id, request)
+        return results[0] if results else None
+
+    async def delete_share(self, user_id: UUID, share_id: UUID) -> bool:
+        """Alias for revoke_share."""
+        return await self.revoke_share(user_id, share_id)
+
+    async def get_shares_given(self, user_id: UUID, request: ShareListRequest) -> ShareListResponse:
+        """Get shares given by user."""
+        request.type = "given"
+        return await self.list_shares(user_id, request)
+
+    async def get_shares_received(self, user_id: UUID, request: ShareListRequest) -> ShareListResponse:
+        """Get shares received by user."""
+        request.type = "received"
+        return await self.list_shares(user_id, request)
+
+    async def get_note_shares(self, user_id: UUID, note_id: UUID) -> List[ShareResponse]:
+        """Get all shares for a specific note (only if user owns the note)."""
+        # Verify note exists and user owns it
+        note = await self.note_repo.get_by_id_and_user(note_id, user_id)
+        if not note:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Note not found or not owned by user"
+            )
+
+        shares = await self.share_repo.get_note_shares(note_id)
+        return [self._share_to_response(share) for share in shares]

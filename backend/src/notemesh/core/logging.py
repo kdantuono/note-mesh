@@ -112,7 +112,8 @@ def setup_logging() -> None:
     settings = get_settings()
 
     # Create logs directory if it doesn't exist
-    log_dir = Path("logs")
+    # Use /app/logs for Docker or logs/ for local development
+    log_dir = Path("/app/logs") if Path("/app").exists() else Path("logs")
     log_dir.mkdir(exist_ok=True)
 
     # Configure logging

@@ -19,14 +19,23 @@ class SearchService(ISearchService):
 
     async def search_notes(self, user_id: UUID, request: NoteSearchRequest) -> NoteSearchResponse:
         """Search notes with filters."""
-        if not request.query.strip():
-            # If empty query, return empty results
+        # Allow search with only tag filter (no query text)
+        has_query = request.query.strip() and request.query.strip() != "*"
+        has_tags = request.tags and len(request.tags) > 0
+
+        if not has_query and not has_tags:
+            # If no query and no tags, return empty results
             return NoteSearchResponse(
-                notes=[],
-                total_count=0,
-                query=request.query,
+                items=[],
+                total=0,
                 page=request.page or 1,
                 per_page=request.per_page or 20,
+                pages=0,
+                has_next=False,
+                has_prev=False,
+                query=request.query,
+                filters_applied={"tag_filter": request.tags or []},
+                search_time_ms=0.0,
             )
 
         # Use repository search
@@ -36,40 +45,68 @@ class SearchService(ISearchService):
 
         # Convert to list item format for search results
         from ..schemas.notes import NoteListItem
-        from .note_service import NoteService
 
         note_list_items = []
+
+        # Get repositories if session is available
+        user_repo = None
+        share_repo = None
         if self.session is not None:
-            # Use proper note service when session is available
-            note_service = NoteService(self.session)
-            for note in notes:
-                note_list_item = await note_service._note_to_list_item(note, user_id)
-                note_list_items.append(note_list_item)
-        else:
-            # Fallback for tests - create simplified list items
-            for note in notes:
-                content_preview = note.content[:100] + "..." if len(note.content) > 100 else note.content
-                note_list_item = NoteListItem(
-                    id=note.id,
-                    title=note.title,
-                    content=note.content,
-                    content_preview=content_preview,
-                    tags=[tag.name if hasattr(tag, 'name') else str(tag) for tag in getattr(note, 'tags', [])],
-                    hyperlinks=[],
-                    is_public=getattr(note, 'is_public', False),
-                    owner_id=note.owner_id,
-                    owner_username=None,  # Not available in test context
-                    owner_display_name=None,
-                    is_shared=False,
-                    is_owned=True,  # Assume owned for search results
-                    can_edit=True,
-                    created_at=note.created_at,
-                    updated_at=note.updated_at,
-                    view_count=getattr(note, 'view_count', 0),
-                    share_count=0,
-                    tags_display=", ".join([tag.name if hasattr(tag, 'name') else str(tag) for tag in getattr(note, 'tags', [])])
-                )
-                note_list_items.append(note_list_item)
+            from ..repositories.user_repository import UserRepository
+            from ..repositories.share_repository import ShareRepository
+            user_repo = UserRepository(self.session)
+            share_repo = ShareRepository(self.session)
+
+        for note in notes:
+            # Get owner information if user repository is available
+            owner_username = None
+            owner_display_name = None
+            if user_repo:
+                try:
+                    owner_info = await user_repo.get_by_id(note.owner_id)
+                    owner_username = owner_info.username if owner_info else None
+                    owner_display_name = owner_info.full_name if owner_info else None
+                except Exception:
+                    # Fallback if user lookup fails
+                    pass
+
+            # Create content preview
+            content_preview = note.content[:200] + "..." if len(note.content) > 200 else note.content
+
+            # Get sharing information if share repository is available
+            is_shared_by_user = False
+            share_count = 0
+            if share_repo:
+                try:
+                    sharing_info = await self._get_note_sharing_info(share_repo, note.id, user_id)
+                    is_shared_by_user = sharing_info.get("is_shared_by_user", False)
+                    share_count = sharing_info.get("share_count", 0)
+                except Exception:
+                    # Fallback if sharing lookup fails
+                    pass
+
+            # Determine ownership: is this note owned by the current user?
+            is_owned = note.owner_id == user_id
+            is_shared = not is_owned  # If not owned, then it's shared with user
+            can_edit = is_owned  # Only owners can edit (default read-only for shared)
+
+            note_list_item = NoteListItem(
+                id=note.id,
+                title=note.title,
+                content_preview=content_preview,
+                tags=[tag.name if hasattr(tag, 'name') else str(tag) for tag in getattr(note, 'tags', [])],
+                owner_id=note.owner_id,
+                owner_username=owner_username,
+                owner_display_name=owner_display_name,
+                is_shared=is_shared,  # True if shared with user, False if owned
+                is_owned=is_owned,    # True if owned by user, False if shared
+                can_edit=can_edit,    # True if owned, False if shared (read-only)
+                is_shared_by_user=is_shared_by_user,
+                share_count=share_count,
+                created_at=note.created_at,
+                updated_at=note.updated_at
+            )
+            note_list_items.append(note_list_item)
 
         # Apply pagination
         page = request.page or 1
@@ -104,6 +141,26 @@ class SearchService(ISearchService):
         # For basic implementation, deletion from DB handles this
         # In a real application, this would remove from search index
         return True
+
+    async def _get_note_sharing_info(self, share_repo, note_id: UUID, user_id: UUID) -> dict:
+        """Get sharing information for a note owned by the user."""
+        try:
+            # Count active shares for this note created by the user
+            shares_given, _ = await share_repo.list_shares_given(user_id, page=1, per_page=1000)
+            note_shares = [share for share in shares_given if share.note_id == note_id and getattr(share, 'is_active', True)]
+
+            return {
+                "is_shared_by_user": len(note_shares) > 0,
+                "share_count": len(note_shares),
+                "shared_with": [getattr(share, 'shared_with_username', 'Unknown') for share in note_shares]
+            }
+        except Exception:
+            # Fallback in case of any error
+            return {
+                "is_shared_by_user": False,
+                "share_count": 0,
+                "shared_with": []
+            }
 
     async def suggest_tags(self, user_id: UUID, query: str, limit: int = 10) -> List[str]:
         """Suggest tags based on query."""

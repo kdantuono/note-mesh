@@ -62,3 +62,26 @@ class UserRepository:
         """Check if username exists."""
         user = await self.get_by_username(username)
         return user is not None
+
+    # Additional methods for test compatibility
+    async def list_users(self, page: int = 1, per_page: int = 20) -> tuple[list[User], int]:
+        """List all users with pagination."""
+        from sqlalchemy import func
+
+        offset = (page - 1) * per_page
+
+        # Count query
+        count_stmt = select(func.count(User.id))
+        total_result = await self.session.execute(count_stmt)
+        total_count = total_result.scalar()
+
+        # Data query
+        stmt = select(User).offset(offset).limit(per_page)
+        result = await self.session.execute(stmt)
+        users = list(result.scalars())
+
+        return users, total_count
+
+    async def check_username_exists(self, username: str) -> bool:
+        """Alias for is_username_taken."""
+        return await self.is_username_taken(username)

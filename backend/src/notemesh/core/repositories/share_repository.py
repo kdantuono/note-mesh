@@ -187,3 +187,33 @@ class ShareRepository:
         await self.session.commit()
         await self.session.refresh(share, ["note", "shared_by_user", "shared_with_user"])
         return share
+
+    # Alias methods for test compatibility
+    async def get_share_by_id(self, share_id: UUID) -> Optional[Share]:
+        """Alias for get_by_id."""
+        return await self.get_by_id(share_id)
+
+    async def update_share_status(self, share_id: UUID, status: str) -> Optional[Share]:
+        """Update share status."""
+        try:
+            share = await self.update_share(share_id, {"status": status})
+            return share
+        except ValueError:
+            return None
+
+    async def get_note_shares(self, note_id: UUID) -> List[Share]:
+        """Get all shares for a specific note."""
+        stmt = (
+            select(Share)
+            .options(
+                selectinload(Share.shared_by_user),
+                selectinload(Share.shared_with_user),
+            )
+            .where(Share.note_id == note_id)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
+
+    async def check_existing_share(self, note_id: UUID, shared_with_user_id: UUID) -> Optional[Share]:
+        """Alias for get_existing_share."""
+        return await self.get_existing_share(note_id, shared_with_user_id)

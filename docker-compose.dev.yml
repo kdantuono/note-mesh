@@ -66,6 +66,8 @@ services:
       - ./backend/src:/app/src:ro
       - ./backend/tests:/app/tests:ro
       - ./backend/logs:/app/logs
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/alembic.ini:/app/alembic.ini:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,10 +77,10 @@ services:
       sh -c "
         echo 'Waiting for dependencies to be ready...' &&
         echo 'Running database migrations...' &&
-        python -m alembic upgrade head &&
+        cd /app && PYTHONPATH=/app/src alembic upgrade head &&
         echo 'Database migrations completed successfully' &&
         echo 'Starting development server with hot reload...' &&
-        uvicorn notemesh.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+        cd /app/src && uvicorn notemesh.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
       "
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health/" ]

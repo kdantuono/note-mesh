@@ -10,6 +10,7 @@ from .auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from .common import ErrorResponse, PaginationResponse
 from .notes import (
     NoteCreate,
+    NoteListItem,
     NoteListResponse,
     NoteResponse,
     NoteSearchRequest,
@@ -28,6 +29,7 @@ __all__ = [
     "NoteCreate",
     "NoteUpdate",
     "NoteResponse",
+    "NoteListItem",
     "NoteListResponse",
     "NoteSearchRequest",
     "NoteSearchResponse",
@@ -39,3 +41,6 @@ __all__ = [
     "PaginationResponse",
     "ErrorResponse",
 ]
+
+# Resolve forward references after all imports
+ShareResponse.model_rebuild()
