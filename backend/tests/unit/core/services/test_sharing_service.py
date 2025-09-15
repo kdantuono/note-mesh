@@ -214,7 +214,7 @@ async def test_get_shared_note_forbidden(monkeypatch):
 
     with pytest.raises(HTTPException) as ei:
         await svc.get_shared_note(note_id, user_id)
-    assert ei.value.status_code == 403
+    assert ei.value.status_code == 404  # Changed from 403 to 404 for consistency
 
 
 @pytest.mark.asyncio

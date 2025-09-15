@@ -13,6 +13,8 @@ from ..models.note import Note
 from ..models.tag import NoteTag, Tag
 from ..models.user import User
 from ..repositories.note_repository import NoteRepository
+from ..repositories.share_repository import ShareRepository
+from ..repositories.user_repository import UserRepository
 from ..schemas.notes import NoteCreate, NoteListItem, NoteListResponse, NoteResponse, NoteUpdate
 from .interfaces import INoteService
 
@@ -23,6 +25,10 @@ class NoteService(INoteService):
     def __init__(self, session: AsyncSession):
         self.session = session
         self.note_repo = NoteRepository(session)
+        # Used to check access when the note is shared with the user
+        self.share_repo = ShareRepository(session)
+        # Used to fetch user information for owner details
+        self.user_repo = UserRepository(session)
 
     async def create_note(self, user_id: UUID, request: NoteCreate) -> NoteResponse:
         """Create new note."""
@@ -51,17 +57,39 @@ class NoteService(INoteService):
         if all_tags:
             await self._add_tags_to_note(note.id, list(all_tags))
 
-        return self._note_to_response(
+        return await self._note_to_response(
             note, user_id, override_tags=list(all_tags) if all_tags else []
         )
 
     async def get_note(self, note_id: UUID, user_id: UUID) -> NoteResponse:
-        """Get note by ID."""
-        note = await self.note_repo.get_by_id_and_user(note_id, user_id)
-        if not note:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        """Get note by ID.
 
-        return self._note_to_response(note, user_id)
+        Behavior:
+        - If the current user owns the note, return it.
+        - Otherwise, if the note is shared with the current user (read or write), allow access.
+        - If neither, return 404 (to avoid information leakage about existence).
+        """
+        # First, try owned note fast-path
+        note = await self.note_repo.get_by_id_and_user(note_id, user_id)
+        if note:
+            return await self._note_to_response(note, user_id)
+
+        # If not owned, check if the note is shared with the user
+        try:
+            access = await self.share_repo.check_note_access(note_id, user_id)
+        except Exception:
+            access = {"can_read": False}
+
+        if access.get("can_read"):
+            note = await self.note_repo.get_by_id(note_id)
+            if not note:
+                # Shared link exists but note was deleted
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+            # Build response with correct can_edit based on share permission
+            return await self._note_to_response(note, user_id, can_edit_override=bool(access.get("can_write", False)))
+
+        # Not owned and not shared
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
 
     async def update_note(self, note_id: UUID, user_id: UUID, request: NoteUpdate) -> NoteResponse:
         """Update existing note."""
@@ -112,7 +140,7 @@ class NoteService(INoteService):
 
             await self.session.refresh(updated_note, ["tags"])
 
-        return self._note_to_response(updated_note, user_id)
+        return await self._note_to_response(updated_note, user_id)
 
     async def delete_note(self, note_id: UUID, user_id: UUID) -> bool:
         """Delete note."""
@@ -135,7 +163,7 @@ class NoteService(INoteService):
             user_id, page, per_page, tag_filter
         )
 
-        note_responses = [self._note_to_list_item(note, user_id) for note in notes]
+        note_responses = [await self._note_to_list_item(note, user_id) for note in notes]
 
         return NoteListResponse.create(
             items=note_responses, total=total_count, page=page, per_page=per_page
@@ -217,7 +245,7 @@ class NoteService(INoteService):
         await self.session.execute(stmt)
         await self.session.commit()
 
-    def _note_to_response(self, note, current_user_id=None, override_tags=None) -> NoteResponse:
+    async def _note_to_response(self, note, current_user_id=None, override_tags=None, can_edit_override=None) -> NoteResponse:
         """Convert note model to response."""
         # Use override_tags if provided, otherwise try to load from relationship
         if override_tags is not None:
@@ -231,8 +259,10 @@ class NoteService(INoteService):
                 except Exception:
                     tags = []  # Fallback if tags can't be loaded
 
-        # Skip owner username for now to avoid relationship loading
-        owner_username = None
+        # Fetch owner information
+        owner_info = await self._get_user_info(note.owner_id)
+        owner_username = owner_info.username if owner_info else None
+        owner_display_name = owner_info.full_name if owner_info else None
 
         return NoteResponse(
             id=note.id,
@@ -243,16 +273,17 @@ class NoteService(INoteService):
             is_public=getattr(note, "is_public", False),
             owner_id=note.owner_id,
             owner_username=owner_username,
+            owner_display_name=owner_display_name,
             is_shared=current_user_id != note.owner_id if current_user_id else False,
             is_owned=current_user_id == note.owner_id if current_user_id else False,
-            can_edit=current_user_id == note.owner_id if current_user_id else False,
+            can_edit=can_edit_override if can_edit_override is not None else (current_user_id == note.owner_id if current_user_id else False),
             created_at=note.created_at,
             updated_at=note.updated_at,
             view_count=getattr(note, "view_count", 0),
             share_count=0,  # TODO: calculate actual share count
         )
 
-    def _note_to_list_item(self, note, current_user_id=None, override_tags=None) -> NoteListItem:
+    async def _note_to_list_item(self, note, current_user_id=None, override_tags=None) -> NoteListItem:
         """Convert note model to list item response."""
         # Use override_tags if provided, otherwise try to load from relationship
         if override_tags is not None:
@@ -272,8 +303,10 @@ class NoteService(INoteService):
         if len(content) > 200:
             content_preview += "..."
 
-        # Skip owner username for now to avoid relationship loading
-        owner_username = None
+        # Fetch owner information
+        owner_info = await self._get_user_info(note.owner_id)
+        owner_username = owner_info.username if owner_info else None
+        owner_display_name = owner_info.full_name if owner_info else None
 
         return NoteListItem(
             id=note.id,
@@ -282,6 +315,7 @@ class NoteService(INoteService):
             tags=tags,
             owner_id=note.owner_id,
             owner_username=owner_username,
+            owner_display_name=owner_display_name,
             is_shared=current_user_id != note.owner_id if current_user_id else False,
             is_owned=current_user_id == note.owner_id if current_user_id else False,
             can_edit=current_user_id == note.owner_id if current_user_id else False,
@@ -296,6 +330,10 @@ class NoteService(INoteService):
         url_pattern = r'https?://[^\s<>":' "'" "`|(){}[\]]*"
         urls = re.findall(url_pattern, text, re.IGNORECASE)
         return list(set(urls))
+
+    async def _get_user_info(self, user_id: UUID) -> Optional[User]:
+        """Get user information by ID."""
+        return await self.user_repo.get_by_id(user_id)
 
 
 def _get_or_create_tag_by_name(session: Session, name: str, created_by: User | None) -> Tag:

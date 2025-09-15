@@ -30,8 +30,27 @@ class NotesManager {
                 try {
                     const sharedWithMe = await apiClient.getSharedWithMe(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedWithMe && sharedWithMe.shares && Array.isArray(sharedWithMe.shares)) {
-                        // Backend returns 'shares' array, not 'items'
-                        const sharedNotes = sharedWithMe.shares.map(share => share.note || share);
+                        // Backend returns 'shares' array, extract note data properly
+                        const sharedNotes = sharedWithMe.shares.map(share => {
+                            // If share.note exists, use it; otherwise create note-like object from share data
+                            if (share.note) {
+                                return share.note;
+                            } else {
+                                // Fallback: create note-like object using share data
+                                return {
+                                    id: share.note_id, // Use note_id, not share.id
+                                    title: share.note_title || 'Unknown Note',
+                                    content: '', // We don't have content in share response
+                                    tags: [],
+                                    owner_id: share.shared_by_user_id || null,
+                                    owner_username: share.shared_by_username || null,
+                                    created_at: share.shared_at,
+                                    updated_at: share.shared_at,
+                                    is_shared: true,
+                                    can_edit: share.permission_level === 'write'
+                                };
+                            }
+                        });
                         notesData.items = [...notesData.items, ...this.markNotesAsType(sharedNotes, NOTE_TYPES.SHARED_WITH_ME)];
                         notesData.total += sharedWithMe.total_count || 0;
                     }
@@ -45,8 +64,27 @@ class NotesManager {
                 try {
                     const sharedByMe = await apiClient.getMyShares(page, CONFIG.ITEMS_PER_PAGE);
                     if (sharedByMe && sharedByMe.shares && Array.isArray(sharedByMe.shares)) {
-                        // Backend returns 'shares' array, extract the notes from the shares
-                        const sharedNotes = sharedByMe.shares.map(share => share.note || share);
+                        // Backend returns 'shares' array, extract note data properly
+                        const sharedNotes = sharedByMe.shares.map(share => {
+                            // If share.note exists, use it; otherwise create note-like object from share data
+                            if (share.note) {
+                                return share.note;
+                            } else {
+                                // Fallback: create note-like object using share data
+                                return {
+                                    id: share.note_id, // Use note_id, not share.id
+                                    title: share.note_title || 'Unknown Note',
+                                    content: '', // We don't have content in share response
+                                    tags: [],
+                                    owner_id: share.shared_by_user_id || null,
+                                    owner_username: share.shared_by_username || null,
+                                    created_at: share.shared_at,
+                                    updated_at: share.shared_at,
+                                    is_shared: true,
+                                    can_edit: true // Owner can always edit their own notes
+                                };
+                            }
+                        });
                         notesData.items = [...notesData.items, ...this.markNotesAsType(sharedNotes, NOTE_TYPES.SHARED_BY_ME)];
                         notesData.total += sharedByMe.total_count || 0;
                     }
@@ -166,7 +204,7 @@ class NotesManager {
     // Get owner information for display
     getOwnerInfo(note, typeClass) {
         const currentUser = authManager.getCurrentUser();
-        const ownerName = note.owner?.full_name || note.owner?.username || note.owner_username;
+        const ownerName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username;
 
         if (typeClass === NOTE_TYPES.OWNED || note.is_owned || this.isUserOwner(note, currentUser)) {
             return '<strong>You</strong>';
@@ -325,7 +363,7 @@ class NotesManager {
         if (isOwner) {
             ownerInfo = '<i class="fas fa-user" aria-hidden="true"></i> <strong>Owner: You</strong>';
         } else {
-            const ownerName = note.owner?.full_name || note.owner?.username || note.owner_username || 'Unknown';
+            const ownerName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username || 'Unknown';
             ownerInfo = `<i class="fas fa-user" aria-hidden="true"></i> <strong>Owner:</strong> ${this.escapeHtml(ownerName)}`;
         }
 
@@ -334,7 +372,7 @@ class NotesManager {
         if (isOwner && note.share_count > 0) {
             sharingInfo = `<br><i class="fas fa-share-alt" aria-hidden="true"></i> <strong>Shared with:</strong> ${note.share_count} user(s)`;
         } else if (!isOwner) {
-            const sharedByName = note.owner?.full_name || note.owner?.username || note.owner_username || 'Unknown user';
+            const sharedByName = note.owner?.full_name || note.owner?.username || note.owner_display_name || note.owner_username || 'Unknown user';
             sharingInfo = `<br><i class="fas fa-share" aria-hidden="true"></i> <strong>Shared by:</strong> ${this.escapeHtml(sharedByName)}`;
         }
 

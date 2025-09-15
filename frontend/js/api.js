@@ -233,7 +233,23 @@ class ApiClient {
     }
 
     async getNote(noteId) {
-        return await this.makeRequest(ENDPOINTS.NOTE_BY_ID(noteId));
+        try {
+            return await this.makeRequest(ENDPOINTS.NOTE_BY_ID(noteId));
+        } catch (error) {
+            // Fallback: if note not found, try shared note endpoint (for recipients)
+            const msg = (error?.message || '').toLowerCase();
+            if (msg.includes('not found') || msg.includes('404')) {
+                try {
+                    const shared = await this.getSharedNote(noteId);
+                    if (shared) {
+                        return this._mapSharedNoteToRegular(shared);
+                    }
+                } catch (e) {
+                    // Re-throw original error if fallback fails too
+                }
+            }
+            throw error;
+        }
     }
 
     async createNote(noteData) {
@@ -395,6 +411,26 @@ class ApiClient {
     // Get shared note (for recipients)
     async getSharedNote(noteId) {
         return await this.makeRequest(ENDPOINTS.SHARED_NOTE(noteId));
+    }
+
+    // Map SharedNoteResponse to a NoteResponse-like object used across the app
+    _mapSharedNoteToRegular(shared) {
+        return {
+            id: shared.id,
+            title: shared.title,
+            content: shared.content,
+            tags: shared.tags || [],
+            hyperlinks: shared.hyperlinks || [],
+            is_public: false,
+            owner_id: shared.owner_id,
+            owner_username: shared.owner_username,
+            is_shared: true,
+            can_edit: !!shared.can_write,
+            created_at: shared.created_at,
+            updated_at: shared.updated_at,
+            view_count: 0,
+            share_count: 0
+        };
     }
 
     // Health check

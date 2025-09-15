@@ -91,10 +91,17 @@ class SharingService(ISharingService):
     async def get_shared_note(self, note_id: UUID, user_id: UUID) -> SharedNoteResponse:
         """Get shared note for recipient."""
         # Check if user has access to this note
-        access_info = await self.share_repo.check_note_access(note_id, user_id)
+        try:
+            access_info = await self.share_repo.check_note_access(note_id, user_id)
+        except Exception:
+            # If there's an error checking access, assume no access
+            access_info = {"can_read": False}
+
         if not access_info["can_read"]:
+            # Return 404 instead of 403 to prevent information leakage about note existence
+            # This is consistent with NoteService.get_note() behavior
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="No permission to access this note"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
             )
 
         # Get the note

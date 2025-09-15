@@ -132,6 +132,7 @@ class NoteResponse(BaseModel):
     # Ownership and sharing info
     owner_id: uuid.UUID = Field(description="Note owner ID")
     owner_username: Optional[str] = Field(description="Note owner username")
+    owner_display_name: Optional[str] = Field(description="Note owner display name")
     is_shared: bool = Field(description="Whether note is shared with current user")
     can_edit: bool = Field(description="Whether current user can edit this note")
 
@@ -176,6 +177,7 @@ class NoteListItem(BaseModel):
     # Ownership and sharing info
     owner_id: uuid.UUID = Field(description="Note owner ID")
     owner_username: Optional[str] = Field(description="Note owner username")
+    owner_display_name: Optional[str] = Field(description="Note owner display name")
     is_shared: bool = Field(description="Whether note is shared with current user")
     is_owned: bool = Field(description="Whether current user owns this note")
     can_edit: bool = Field(description="Whether current user can edit this note")
