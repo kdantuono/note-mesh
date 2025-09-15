@@ -92,6 +92,27 @@ async def root():
     return {"message": "NoteMesh API"}
 
 
+# API root endpoint for better navigation
+@app.get("/api/")
+async def api_root():
+    return {
+        "message": "NoteMesh API",
+        "version": "0.1.0",
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc",
+            "openapi_json": "/openapi.json"
+        },
+        "endpoints": {
+            "authentication": "/api/auth/",
+            "notes": "/api/notes/",
+            "search": "/api/search/",
+            "sharing": "/api/sharing/",
+            "health": "/api/health/"
+        }
+    }
+
+
 # Basic unprefixed health endpoint for compatibility with tests
 @app.get("/health")
 async def basic_health():

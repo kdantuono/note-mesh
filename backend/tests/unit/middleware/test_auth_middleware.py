@@ -34,7 +34,10 @@ def test_jwtbearer_accepts_valid_token(monkeypatch):
     uid = uuid.uuid4()
     from src.notemesh.middleware import auth as auth_module
 
-    monkeypatch.setattr(auth_module, "get_user_id_from_token", lambda t: uid)
+    async def mock_get_user_id_from_token(t):
+        return uid
+
+    monkeypatch.setattr(auth_module, "get_user_id_from_token", mock_get_user_id_from_token)
 
     app = build_app()
     client = TestClient(app)
@@ -58,9 +61,12 @@ def test_jwtbearer_rejects_wrong_scheme():
 
 
 def test_jwtbearer_rejects_invalid_token(monkeypatch):
-    from src.notemesh import security as security_pkg
+    from src.notemesh.middleware import auth as auth_module
 
-    monkeypatch.setattr(security_pkg, "get_user_id_from_token", lambda t: None)
+    async def mock_get_user_id_from_token(t):
+        return None
+
+    monkeypatch.setattr(auth_module, "get_user_id_from_token", mock_get_user_id_from_token)
 
     app = build_app()
     client = TestClient(app)
@@ -72,7 +78,10 @@ def test_get_current_user_id_dependency(monkeypatch):
     uid = uuid.uuid4()
     from src.notemesh.middleware import auth as auth_module
 
-    monkeypatch.setattr(auth_module, "get_user_id_from_token", lambda t: uid)
+    async def mock_get_user_id_from_token(t):
+        return uid
+
+    monkeypatch.setattr(auth_module, "get_user_id_from_token", mock_get_user_id_from_token)
 
     app = build_app(depends_current_user=True)
     client = TestClient(app)

@@ -35,7 +35,7 @@ class TestSettings:
         assert settings.database_echo is False
 
         # Redis
-        assert settings.redis_url == "redis://localhost:6379/0"
+        assert settings.redis_url == "redis://:devpassword@localhost:6379/0"
         assert settings.redis_max_connections == 10
 
         # JWT
